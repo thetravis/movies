@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * REST endpoints for movies. Paths, parameters and validation come from the generated
+ * REST endpoints for movies. Paths, parameters and request validation come from the generated
  * {@link MoviesApi} interface (see openapi.yaml); this class only delegates to {@link MovieService}.
  * Errors are turned into responses by {@link ApiExceptionHandler}.
  */

@@ -27,7 +27,8 @@ import tools.jackson.databind.json.JsonMapper;
  * Imports movies from a JSON file on application startup (after Liquibase has created the schema).
  * <p>
  * The file is a JSON array of movies in the same format as the {@code NewMovie} schema of the API
- * contract. The import is safe to run on every startup:
+ * contract, and each entry is read into the generated {@link NewMovieDto}. The import is safe to
+ * run on every startup:
  * <ul>
  *   <li>Movies that already exist (same name and year) are skipped, so restarts don't create
  *       duplicates and a different file adds its movies to the existing ones.</li>
@@ -123,15 +124,15 @@ public class MovieImporter implements ApplicationRunner {
     }
 
     private static NewMovieDto correctKnownTypos(NewMovieDto movie) {
-        if (movie.getGenres() != null) {
-            Set<String> genres = new LinkedHashSet<>();
-            for (String genre : movie.getGenres()) {
-                String key = genre == null ? null : genre.trim().toLowerCase(Locale.ROOT);
-                genres.add(GENRE_CORRECTIONS.getOrDefault(key, genre));
-            }
-            movie.setGenres(genres);
+        if (movie.getGenres() == null) {
+            return movie;
         }
-        return movie;
+        Set<String> genres = new LinkedHashSet<>();
+        for (String genre : movie.getGenres()) {
+            String key = genre == null ? null : genre.trim().toLowerCase(Locale.ROOT);
+            genres.add(GENRE_CORRECTIONS.getOrDefault(key, genre));
+        }
+        return movie.genres(genres);
     }
 
     private static String describe(ConstraintViolationException e) {

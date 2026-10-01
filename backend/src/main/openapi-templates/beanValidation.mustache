@@ -1,0 +1,12 @@
+{{!
+  Override of the openapi-generator JavaSpring template "beanValidation.mustache" (generator 7.25.0).
+
+  Change: no @Valid on container properties (List, Set, Map). The original puts @Valid both on the
+  getter and on the element type, e.g. "@Valid List<@Valid PersonDto> getActors()". Hibernate
+  Validator 9 deprecates the container-level one (warning HV000271); the element-level @Valid, which
+  the generator adds separately, is kept and is enough for cascaded validation.
+
+  When upgrading the generator, compare with the new original and drop this override if the
+  generator no longer adds container-level @Valid:
+  https://github.com/OpenAPITools/openapi-generator/blob/master/modules/openapi-generator/src/main/resources/JavaSpring/beanValidation.mustache
+}}{{>notNull}}{{^isContainer}}{{^isPrimitiveType}}@Valid {{/isPrimitiveType}}{{/isContainer}}{{^openApiNullable}}{{>beanValidationCore}}{{/openApiNullable}}{{#openApiNullable}}{{^useOptional}}{{>beanValidationCore}}{{/useOptional}}{{/openApiNullable}}{{#useOptional}}{{#openApiNullable}}{{#isContainer}}{{^required}}{{>beanValidationCore}}{{/required}}{{/isContainer}}{{/openApiNullable}}{{#openApiNullable}}{{#required}}{{>beanValidationCore}}{{/required}}{{/openApiNullable}}{{/useOptional}}

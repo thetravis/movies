@@ -1,23 +1,13 @@
 package com.example.movies.service;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
-import com.example.movies.domain.Genre;
 import com.example.movies.domain.Movie;
-import com.example.movies.domain.Person;
 import com.example.movies.generated.model.MovieDto;
 import com.example.movies.generated.model.MoviePageDto;
 import com.example.movies.generated.model.NewMovieDto;
-import com.example.movies.generated.model.PersonDto;
-import com.example.movies.repository.GenreRepository;
 import com.example.movies.repository.MovieRepository;
-import com.example.movies.repository.PersonRepository;
+import com.example.movies.service.mapper.MovieMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -30,10 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * Use cases of the Movies API: list, search, get and add movies.
+ * Use cases for movies: list, search, get and add. Used by the REST controller and the data
+ * importer.
  * <p>
- * Methods return API DTOs because the mapping must happen inside the transaction
- * (actors and genres are loaded lazily and open-in-view is disabled).
+ * Each method is one transaction, and mapping between the API DTOs and the entities happens
+ * inside it ({@link MovieMapper}): adding a movie may create persons and genres, which must be
+ * rolled back if the movie is rejected, and the entities' actors and genres are loaded lazily
+ * (open-in-view is disabled).
  */
 @Service
 @Transactional(readOnly = true)
@@ -44,16 +37,11 @@ public class MovieService {
             Sort.Order.asc("name").ignoreCase(), Sort.Order.asc("year"), Sort.Order.asc("id"));
 
     private final MovieRepository movieRepository;
-    private final PersonRepository personRepository;
-    private final GenreRepository genreRepository;
     private final MovieMapper movieMapper;
     private final Validator validator;
 
-    public MovieService(MovieRepository movieRepository, PersonRepository personRepository,
-                        GenreRepository genreRepository, MovieMapper movieMapper, Validator validator) {
+    public MovieService(MovieRepository movieRepository, MovieMapper movieMapper, Validator validator) {
         this.movieRepository = movieRepository;
-        this.personRepository = personRepository;
-        this.genreRepository = genreRepository;
         this.movieMapper = movieMapper;
         this.validator = validator;
     }
@@ -70,6 +58,9 @@ public class MovieService {
         return movieMapper.toPageDto(movies);
     }
 
+    /**
+     * @throws MovieNotFoundException if there is no movie with the id
+     */
     public MovieDto getMovie(Long id) {
         return movieRepository.findById(id)
                 .map(movieMapper::toDto)
@@ -79,92 +70,32 @@ public class MovieService {
     /**
      * Adds a new movie.
      * <ul>
-     *   <li>Text values are trimmed, a blank synopsis is stored as empty (null), and repeated
-     *       actors or genres (case-insensitive) are kept only once.</li>
-     *   <li>The trimmed input is validated against the constraints of the API contract, so this
-     *       method is safe to call also from places other than the REST controller (e.g. the data
-     *       importer).</li>
-     *   <li>Existing persons and genres are reused (matched case-insensitively).</li>
+     *   <li>Text is trimmed; repeated actors and genres (case-insensitive) are kept only once;
+     *       existing persons and genres are reused (see {@link MovieMapper}).</li>
+     *   <li>The movie is validated against the rules declared on the {@link Movie} entity, so this
+     *       is safe to call from places other than the REST controller (e.g. the data importer).</li>
      * </ul>
+     * If the movie is rejected, the transaction is rolled back, including persons and genres
+     * created for it.
      *
-     * @throws ConstraintViolationException if the input is invalid
+     * @throws ConstraintViolationException if the movie is invalid
      * @throws DuplicateMovieException      if a movie with the same name and year already exists
      */
     @Transactional
-    public MovieDto createMovie(NewMovieDto input) {
-        NewMovieDto newMovie = normalize(input);
-        validate(newMovie);
+    public MovieDto createMovie(NewMovieDto newMovie) {
+        Movie movie = movieMapper.toEntity(newMovie);
+        validate(movie);
 
-        if (movieRepository.existsByNameIgnoreCaseAndYear(newMovie.getName(), newMovie.getYear())) {
-            throw new DuplicateMovieException(newMovie.getName(), newMovie.getYear());
+        if (movieRepository.existsByNameIgnoreCaseAndYear(movie.getName(), movie.getYear())) {
+            throw new DuplicateMovieException(movie.getName(), movie.getYear());
         }
-
-        Movie movie = new Movie(newMovie.getName(), newMovie.getYear(), newMovie.getAgeLimit(),
-                newMovie.getRating(), newMovie.getSynopsis(), findOrCreatePerson(newMovie.getDirector()));
-        newMovie.getActors().forEach(actor -> movie.addActor(findOrCreatePerson(actor)));
-        newMovie.getGenres().forEach(genre -> movie.addGenre(findOrCreateGenre(genre)));
-
         return movieMapper.toDto(movieRepository.save(movie));
     }
 
-    private Person findOrCreatePerson(PersonDto person) {
-        return personRepository
-                .findByFirstNameIgnoreCaseAndLastNameIgnoreCase(person.getFirstName(), person.getLastName())
-                .orElseGet(() -> personRepository.save(new Person(person.getFirstName(), person.getLastName())));
-    }
-
-    private Genre findOrCreateGenre(String name) {
-        return genreRepository.findByNameIgnoreCase(name)
-                .orElseGet(() -> genreRepository.save(new Genre(name)));
-    }
-
-    private void validate(NewMovieDto newMovie) {
-        Set<ConstraintViolation<NewMovieDto>> violations = validator.validate(newMovie);
+    private void validate(Movie movie) {
+        Set<ConstraintViolation<Movie>> violations = validator.validate(movie);
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
         }
-    }
-
-    /** Returns a trimmed copy of the input without repeated actors or genres. Null-safe. */
-    private static NewMovieDto normalize(NewMovieDto input) {
-        String synopsis = trim(input.getSynopsis());
-
-        Map<String, PersonDto> actors = new LinkedHashMap<>();
-        if (input.getActors() != null) {
-            input.getActors().stream()
-                    .filter(Objects::nonNull)
-                    .map(MovieService::normalize)
-                    .forEach(actor -> actors.putIfAbsent(personKey(actor), actor));
-        }
-
-        Map<String, String> genres = new LinkedHashMap<>();
-        if (input.getGenres() != null) {
-            input.getGenres().stream()
-                    .filter(Objects::nonNull)
-                    .map(MovieService::trim)
-                    .forEach(genre -> genres.putIfAbsent(genre.toLowerCase(Locale.ROOT), genre));
-        }
-
-        return new NewMovieDto()
-                .name(trim(input.getName()))
-                .year(input.getYear())
-                .genres(new LinkedHashSet<>(genres.values()))
-                .ageLimit(input.getAgeLimit())
-                .rating(input.getRating())
-                .actors(new ArrayList<>(actors.values()))
-                .director(input.getDirector() == null ? null : normalize(input.getDirector()))
-                .synopsis(StringUtils.hasText(synopsis) ? synopsis : null);
-    }
-
-    private static PersonDto normalize(PersonDto person) {
-        return new PersonDto(trim(person.getFirstName()), trim(person.getLastName()));
-    }
-
-    private static String personKey(PersonDto person) {
-        return (person.getFirstName() + " " + person.getLastName()).toLowerCase(Locale.ROOT);
-    }
-
-    private static String trim(String value) {
-        return value == null ? null : value.trim();
     }
 }
