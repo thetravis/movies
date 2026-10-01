@@ -207,10 +207,13 @@ backend/
 
 ### Phase 4 – Data import
 Design in 4.1. The importer reuses `MovieService.create`, so build it together with or right after Phase 5.
-- [ ] `@ConfigurationProperties` for `movies.seed.enabled` and `movies.seed.file`.
-- [ ] Importer (`ApplicationRunner`) reading the configured JSON file.
-- [ ] Trim names, normalize genre typo, reuse persons/genres.
-- [ ] Skip existing movies (name + year), log and skip invalid records, log a summary.
+- [x] `MovieSeedProperties` (`@ConfigurationProperties`) for `movies.seed.enabled` and `movies.seed.file`.
+- [x] `MovieImporter` (`ApplicationRunner`) reading the configured JSON file record by record (a broken record doesn't stop the rest); missing/unreadable file or non-array stops startup.
+- [x] Trim names, normalize genre typo, reuse persons/genres.
+- [x] Skip existing movies (name + year), log and skip invalid records, log a summary.
+- [x] Import disabled in `MoviesApplicationTests` so tests don't write to the dev database.
+- [x] Manually verified: first start (20 imported), restart (20 existing), other file (new/existing/invalid mix), missing file.
+- [x] README: "Movie data" section (how to load a different file, reset).
 
 ### Phase 5 – Business logic & API
 - [x] `MovieService`: `listMovies(search, page, size)`, `getMovie(id)`, `createMovie(newMovie)` (trims input, removes repeated actors/genres, validates, checks duplicates, reuses persons/genres). Returns DTOs because mapping needs the transaction.

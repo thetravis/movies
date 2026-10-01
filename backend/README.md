@@ -5,8 +5,8 @@ is designed **contract-first**: the OpenAPI spec in
 [`src/main/resources/openapi/openapi.yaml`](src/main/resources/openapi/openapi.yaml) is the source
 of truth, and the server interfaces and DTOs are generated from it at build time.
 
-> **Status:** work in progress. All endpoints work (list, search, get, add), but the database
-> starts empty: loading the movies from `movies-compact.json` is not implemented yet. See
+> **Status:** work in progress. All endpoints work (list, search, get, add), and the movies from
+> `movies-compact.json` are loaded on startup. See
 > [`documentation/plan.md`](documentation/plan.md) for progress.
 
 ## Requirements
@@ -72,7 +72,9 @@ a Maven reload.)
 .\mvnw spring-boot:run
 ```
 
-The application starts on **http://localhost:8080**. Stop it with `Ctrl+C`.
+The application starts on **http://localhost:8080**. Stop it with `Ctrl+C`. On startup it creates
+the database tables (first run only) and loads the movies from the bundled JSON file; see
+[Movie data](#movie-data).
 
 - Swagger UI (API documentation): http://localhost:8080/swagger-ui.html
 - The raw API contract: http://localhost:8080/openapi.yaml
@@ -84,8 +86,42 @@ The application starts on **http://localhost:8080**. Stop it with `Ctrl+C`.
 ```
 
 The tests use the PostgreSQL database from `docker-compose.yml`, so **the database must be
-running**. Each repository test runs in a transaction that is rolled back, so the tests don't
-change the data in the database.
+running**. Each repository test runs in a transaction that is rolled back, and the movie import is
+switched off in tests, so the tests don't change the data in the database.
+
+## Movie data
+
+On every startup the application imports movies from a JSON file, by default the bundled
+[`src/main/resources/data/movies-compact.json`](src/main/resources/data/movies-compact.json).
+The log shows a summary, e.g. `Movie import finished: 20 imported, 0 already existed, 0 invalid.`
+
+- **Safe to run on every startup:** movies that already exist (same name and year, ignoring case)
+  are skipped. Restarting doesn't create duplicates.
+- **Same rules as the API:** each movie is cleaned up (names trimmed, repeated actors/genres
+  removed) and validated exactly like `POST /api/movies`. Invalid movies are logged and skipped.
+- **Known data fixes:** the genre typo `Familty` in the bundled file is corrected to `Family`.
+
+### Loading a different JSON file
+
+The file must be a JSON array of movies in the same format as `movies-compact.json` (the
+`NewMovie` schema in the API contract). Point the application to it with `movies.seed.file`;
+any Spring resource location works (`file:...`, `classpath:...`):
+
+```shell
+.\mvnw spring-boot:run "-Dspring-boot.run.arguments=--movies.seed.file=file:C:/data/other-movies.json"
+```
+
+or with an environment variable (PowerShell):
+
+```powershell
+$env:MOVIES_SEED_FILE = "file:C:/data/other-movies.json"
+.\mvnw spring-boot:run
+```
+
+The movies from the new file are **added** to the existing ones. To load only the new file, reset
+the database first (`docker compose down -v`, then `docker compose up -d`).
+
+To skip the import, set `movies.seed.enabled=false` (env var `MOVIES_SEED_ENABLED=false`).
 
 ## Database schema
 
@@ -102,6 +138,9 @@ docker compose stop      # stop the container, keep the data
 docker compose down      # remove the container, keep the data
 docker compose down -v   # remove the container AND delete all data
 ```
+
+After `down -v`, start the database again with `docker compose up -d`; the next application start
+recreates the tables and imports the movies again.
 
 ## Configuration
 
@@ -129,6 +168,7 @@ match.
 | `release version 21 not supported` or `JAVA_HOME is not defined correctly` | `JAVA_HOME` points to an older Java or is not set. Point it to JDK 21 and open a new terminal. |
 | `Connection to localhost:5432 refused` on startup | The database is not running: `docker compose up -d`. |
 | `Port 8080 was already in use` | Another application uses port 8080. Stop it, or run with `.\mvnw spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"`. |
+| `Cannot read movie file ... (check movies.seed.file)` on startup | The configured JSON file doesn't exist or isn't valid JSON. Check the path; on Windows use forward slashes, e.g. `file:C:/data/movies.json`. |
 | `Bind for 0.0.0.0:5432 failed: port is already allocated` | Another PostgreSQL is running locally. Stop it, or set `POSTGRES_PORT=5433` and `DB_PORT=5433`. |
 
 ## Project documentation

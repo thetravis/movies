@@ -11,7 +11,7 @@ spring:
   jpa:
     # Schema is managed by Liquibase changesets (db/changelog), never by Hibernate.
     # Hibernate only checks at startup that the entities match the tables.
-    # Initial data is loaded by a Java importer from a configurable JSON file (Phase 4).
+    # Initial data is loaded by MovieImporter (see movies.seed below).
     hibernate:
       ddl-auto: validate
     open-in-view: false
@@ -25,3 +25,11 @@ spring:
 springdoc:
   swagger-ui:
     url: /openapi.yaml
+
+# Movies loaded from a JSON file on startup (see MovieImporter). Existing movies (same name and
+# year) are skipped, so this is safe on every startup.
+# Override with env vars MOVIES_SEED_ENABLED / MOVIES_SEED_FILE, e.g. MOVIES_SEED_FILE=file:C:/data/movies.json
+movies:
+  seed:
+    enabled: true
+    file: classpath:data/movies-compact.json
