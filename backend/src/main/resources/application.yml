@@ -9,7 +9,8 @@ spring:
     password: ${DB_PASSWORD:movies}
 
   jpa:
-    # Schema is managed by SQL migrations (Flyway, added in Phase 3), never by Hibernate.
+    # Schema is managed by Liquibase changesets (added in Phase 3), never by Hibernate.
+    # Initial data is loaded by a Java importer from a configurable JSON file (Phase 4).
     hibernate:
       ddl-auto: none
     open-in-view: false

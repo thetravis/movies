@@ -12,7 +12,7 @@ Additional requirements from `instructions.txt`:
 
 - Use a common protocol → **REST** (JSON over HTTP).
 - Solve persistence → **PostgreSQL**.
-- Initial data comes from `resources/data/movies-compact.json`.
+- Initial data comes from `src/main/resources/data/movies-compact.json`.
 - At least **one unit test**.
 - Code should be easy for **someone else to continue developing**.
 - Be ready to explain **where and how AI was used** (AI-specific practices such as `AGENTS.md`/`CLAUDE.md`, skills and conversation tracking are a plus).
@@ -28,7 +28,8 @@ Additional requirements from `instructions.txt`:
 | Code generation | `openapi-generator-maven-plugin` (`spring` generator, `interfaceOnly`) | Generates API interfaces + DTOs at build time into `target/generated-sources` |
 | Database | PostgreSQL 17 (Docker Compose) | Requested |
 | DB access | Spring Data JPA (Hibernate) | Low boilerplate, standard |
-| Schema management | Flyway | Versioned, reviewable SQL migrations |
+| Schema management | Liquibase (SQL-formatted changesets) | Versioned, reviewable migrations; each changeset runs exactly once per database |
+| Initial data | Java importer at startup, configurable JSON file | Reviewer can load a different JSON file without touching migrations (see 4.1) |
 | Validation | Jakarta Bean Validation (constraints generated from the spec) | Input validation driven by the contract |
 | Errors | RFC 7807 `ProblemDetail` | Standard error format |
 | Tests | JUnit 5, Mockito, AssertJ, `@WebMvcTest`, Testcontainers (PostgreSQL) | Unit + slice + integration tests |
@@ -83,8 +84,33 @@ Notes:
 
 - `year` is a reserved-ish word → column `release_year`.
 - Check constraints for `rating` (1–5) and `age_limit` (>= 0).
-- Persons/genres are reused (find-or-create) when adding movies.
+- Unique constraint on movie `(name, release_year)` – identifies a movie; used by the importer to skip existing movies.
+- Persons (matched by first + last name) and genres (matched by name) are reused (find-or-create) when adding movies.
 - Indexes for search: `lower(name)` on movie (later possibly `pg_trgm` for `ILIKE '%term%'`).
+
+### 4.1 Schema vs. data responsibilities
+
+**Liquibase owns the schema, the Java importer owns the data.**
+
+- **Schema** – Liquibase changelog `src/main/resources/db/changelog/db.changelog-master.yaml`
+  including SQL-formatted changesets (e.g. `001-create-schema.sql`). The initial schema is
+  written by hand from the model above; future schema changes are new changesets, never edits
+  to applied ones. Hibernate never changes the schema (`ddl-auto: validate`).
+- **Data** – a Java importer (`ApplicationRunner`) runs after Liquibase on startup:
+  - Reads the JSON file from a configurable location:
+    `movies.seed.file` (default `classpath:data/movies-compact.json`; any Spring resource
+    location works, e.g. `file:C:/data/other-movies.json`, or env var `MOVIES_SEED_FILE`).
+  - **Idempotent**: always runs, skips movies that already exist (same name + year). Restarts
+    don't create duplicates; a different file adds its movies to the existing ones.
+  - Normalizes data (trim names, fix known genre typo `Familty` → `Family`).
+  - Saves through the same service method as `POST /api/movies`, so the same validation rules
+    apply. Invalid records are logged and skipped; they don't stop the application.
+  - Can be disabled with `movies.seed.enabled=false` (e.g. tests, production).
+  - Logs a summary: imported / skipped (existing) / rejected (invalid).
+- **Why not import data as a Liquibase changeset?** Data in a changeset would be fixed SQL;
+  loading a different JSON file would require generating SQL and adding a migration. Running
+  Java code inside a changeset (`customChange`) would tie old migrations to current entity
+  classes, which breaks when they evolve.
 
 ## 5. API contract (draft)
 
@@ -133,7 +159,9 @@ backend/
     │       ├── application.yml
     │       ├── openapi/openapi.yaml
     │       ├── data/movies-compact.json
-    │       └── db/migration/V1__create_schema.sql
+    │       └── db/changelog/
+    │           ├── db.changelog-master.yaml
+    │           └── changes/001-create-schema.sql
     └── test/java/.../movies/
 ```
 
@@ -145,7 +173,7 @@ backend/
 - [x] `docker compose up -d` and verify connection.
 
 ### Phase 1 – Project skeleton
-- [x] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver. (Flyway is added in Phase 3, Testcontainers in Phase 6; Actuator dropped as not needed.)
+- [x] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver. (Liquibase is added in Phase 3, Testcontainers in Phase 6; Actuator dropped as not needed.)
 - [x] Add Maven Wrapper.
 - [x] Move `resources/openapi` and `resources/data` under `src/main/resources`.
 - [x] `application.yml` with datasource pointing to the compose DB (values overridable via env vars).
@@ -153,19 +181,22 @@ backend/
 
 ### Phase 2 – Contract first
 - [ ] Write `openapi.yaml` (endpoints + schemas + validation constraints + examples).
-- [ ] Configure `openapi-generator-maven-plugin` (`interfaceOnly`, `useSpringBoot3`, `useTags`, `openApiNullable=false`, Jakarta validation).
+- [ ] Configure `openapi-generator-maven-plugin` (`interfaceOnly`, Spring Boot 4 support, `useTags`, `openApiNullable=false`, Jakarta validation).
 - [ ] `mvnw compile` generates interfaces/DTOs.
 - [ ] Serve Swagger UI for the contract.
 
 ### Phase 3 – Persistence
-- [ ] Add Flyway (`flyway-core` + `flyway-database-postgresql`); migration `V1__create_schema.sql`; `spring.jpa.hibernate.ddl-auto=validate`.
+- [ ] Add Liquibase (`spring-boot-starter-liquibase`); master changelog + `001-create-schema.sql`.
+- [ ] Set `spring.jpa.hibernate.ddl-auto=validate` (app fails fast if entities and schema disagree).
 - [ ] JPA entities + repositories.
 - [ ] Search query (JPQL/Criteria, `lower(...) like`, `distinct`), avoid N+1 (`@EntityGraph`/fetch join).
 
 ### Phase 4 – Data import
-- [ ] Importer (`ApplicationRunner`) that loads `movies-compact.json` when the `movie` table is empty.
+Design in 4.1. The importer reuses `MovieService.create`, so build it together with or right after Phase 5.
+- [ ] `@ConfigurationProperties` for `movies.seed.enabled` and `movies.seed.file`.
+- [ ] Importer (`ApplicationRunner`) reading the configured JSON file.
 - [ ] Trim names, normalize genre typo, reuse persons/genres.
-- [ ] Toggle via property (e.g. `movies.seed.enabled=true`).
+- [ ] Skip existing movies (name + year), log and skip invalid records, log a summary.
 
 ### Phase 5 – Business logic & API
 - [ ] `MovieService`: `findAll`, `search(term)`, `create(newMovie)`, `findById`.
@@ -173,12 +204,12 @@ backend/
 - [ ] Global exception handler → `ProblemDetail` (validation errors 400, not found 404).
 
 ### Phase 6 – Tests
-- [ ] Unit tests: `MovieService` (Mockito), mapper, importer normalization.
+- [ ] Unit tests: `MovieService` (Mockito), mapper, importer (normalization, skipping existing, skipping invalid).
 - [ ] Web slice tests: `@WebMvcTest` for controller (status codes, validation).
 - [ ] Optional integration test: add Testcontainers PostgreSQL, full flow (seed → list → search → create).
 
 ### Phase 7 – Documentation & handover
-- [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls.
+- [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls, how to load a different JSON file, how to reset the DB (`docker compose down -v`).
 - [ ] `AGENTS.md`/`CLAUDE.md`: conventions and commands for AI agents (contract-first rule: change spec first, then regenerate).
 - [ ] `documentation/ai-usage.md`: which tools were used, how, and what was reviewed/changed manually.
 - [ ] Optional: Dockerize the app itself and add it to compose.
@@ -196,4 +227,5 @@ backend/
 
 - ~~Base package name~~ → `com.example.movies` (Initializr default; groupId `com.example`).
 - Paging on the list endpoint: include from the start or return a plain list (20 rows)?
-- Should duplicate movies (same name + year) be rejected with `409 Conflict`?
+- Should duplicate movies (same name + year) be rejected with `409 Conflict` on `POST`? (The importer skips them; the DB unique constraint enforces it either way.)
+- ~~Flyway vs. Liquibase, how to load initial data~~ → Liquibase for schema, configurable Java importer for data (see 4.1).
