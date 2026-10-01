@@ -5,8 +5,8 @@ is designed **contract-first**: the OpenAPI spec in
 [`src/main/resources/openapi/openapi.yaml`](src/main/resources/openapi/openapi.yaml) is the source
 of truth, and the server interfaces and DTOs are generated from it at build time.
 
-> **Status:** work in progress. The project builds and starts, and Swagger UI shows the API
-> contract, but the endpoints are not implemented yet (calls return `404`). See
+> **Status:** work in progress. All endpoints work (list, search, get, add), but the database
+> starts empty: loading the movies from `movies-compact.json` is not implemented yet. See
 > [`documentation/plan.md`](documentation/plan.md) for progress.
 
 ## Requirements

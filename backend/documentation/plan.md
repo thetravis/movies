@@ -144,7 +144,7 @@ Generated code (`target/generated-sources/openapi`, regenerated on every build, 
   implemented), `useSpringBoot4` + `useJackson3`, Bean Validation annotations with Spring built-in
   method validation, no swagger annotations.
 
-Mapping DTO ↔ entity with a small hand-written mapper class.
+Mapping entity → DTO with a small hand-written `MovieMapper` (MapStruct would be the choice if mappings grow). DTO → entity is business logic (trimming, find-or-create, duplicate check) and lives in `MovieService`.
 
 ## 6. Project structure
 
@@ -163,10 +163,10 @@ backend/
     ├── main/
     │   ├── java/.../movies/
     │   │   ├── MoviesApplication.java
-    │   │   ├── api/             # controller implementing generated interface, exception handler, mapper
+    │   │   ├── api/             # controller implementing generated interface, exception handler
     │   │   ├── domain/          # JPA entities
     │   │   ├── repository/      # Spring Data repositories
-    │   │   ├── service/         # business logic (list, search, create)
+    │   │   ├── service/         # business logic (list, search, create), entity → DTO mapper, exceptions
     │   │   └── seed/            # JSON data importer
     │   └── resources/
     │       ├── application.yml
@@ -213,9 +213,11 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 - [ ] Skip existing movies (name + year), log and skip invalid records, log a summary.
 
 ### Phase 5 – Business logic & API
-- [ ] `MovieService`: `findAll`, `search(term)`, `create(newMovie)`, `findById`.
-- [ ] Controller implementing generated `MoviesApi`.
-- [ ] Global exception handler → `ProblemDetail` (validation errors 400, not found 404).
+- [x] `MovieService`: `listMovies(search, page, size)`, `getMovie(id)`, `createMovie(newMovie)` (trims input, removes repeated actors/genres, validates, checks duplicates, reuses persons/genres). Returns DTOs because mapping needs the transaction.
+- [x] `MovieMapper` (entity → DTO, hand-written; MapStruct noted as the option if mappings grow).
+- [x] Controller implementing generated `MoviesApi`.
+- [x] `ApiExceptionHandler` → `ProblemDetail` (400 with field `errors`, 404, 409 duplicate, 409 for DB constraint violations as a safety net).
+- [x] Manually tested all endpoints and error cases with curl.
 
 ### Phase 6 – Tests
 - [ ] Unit tests: `MovieService` (Mockito), mapper, importer (normalization, skipping existing, skipping invalid).
