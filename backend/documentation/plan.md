@@ -37,8 +37,8 @@ Additional requirements from `instructions.txt`:
 ### Prerequisites on the dev machine
 
 - Docker (installed: Docker 29, Compose v5).
-- **JDK 21** – currently only a Java 8 JRE is installed, so a JDK 21 (e.g. Eclipse Temurin 21) must be installed and `JAVA_HOME` pointed to it.
-- Maven is **not** installed – the project will use the Maven Wrapper (`mvnw` / `mvnw.cmd`).
+- **JDK 21** – installed (Oracle JDK 21.0.12), `JAVA_HOME` set.
+- Maven 3.10 installed locally. The project still ships the Maven Wrapper (`mvnw` / `mvnw.cmd`) so reviewers can build without installing Maven.
 
 ## 3. Data analysis (`movies-compact.json`)
 
@@ -141,15 +141,15 @@ backend/
 
 ### Phase 0 – Environment
 - [x] `docker-compose.yml` with PostgreSQL 17 (healthcheck, named volume, overridable credentials).
-- [ ] Install JDK 21, verify `java -version`.
-- [ ] `docker compose up -d` and verify connection.
+- [x] Install JDK 21, verify `java -version`.
+- [x] `docker compose up -d` and verify connection.
 
 ### Phase 1 – Project skeleton
-- [ ] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver, Flyway, Actuator, Testcontainers.
+- [ ] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver. (Flyway is added in Phase 3, Testcontainers in Phase 6; Actuator dropped as not needed.)
 - [ ] Add Maven Wrapper.
 - [ ] Move `resources/openapi` and `resources/data` under `src/main/resources`.
 - [ ] `application.yml` with datasource pointing to the compose DB (values overridable via env vars).
-- [ ] App starts and `/actuator/health` is UP.
+- [ ] App starts and connects to the database.
 
 ### Phase 2 – Contract first
 - [ ] Write `openapi.yaml` (endpoints + schemas + validation constraints + examples).
@@ -158,7 +158,7 @@ backend/
 - [ ] Serve Swagger UI for the contract.
 
 ### Phase 3 – Persistence
-- [ ] Flyway migration `V1__create_schema.sql`.
+- [ ] Add Flyway (`flyway-core` + `flyway-database-postgresql`); migration `V1__create_schema.sql`; `spring.jpa.hibernate.ddl-auto=validate`.
 - [ ] JPA entities + repositories.
 - [ ] Search query (JPQL/Criteria, `lower(...) like`, `distinct`), avoid N+1 (`@EntityGraph`/fetch join).
 
@@ -175,7 +175,7 @@ backend/
 ### Phase 6 – Tests
 - [ ] Unit tests: `MovieService` (Mockito), mapper, importer normalization.
 - [ ] Web slice tests: `@WebMvcTest` for controller (status codes, validation).
-- [ ] Integration test: Testcontainers PostgreSQL, full flow (seed → list → search → create).
+- [ ] Optional integration test: add Testcontainers PostgreSQL, full flow (seed → list → search → create).
 
 ### Phase 7 – Documentation & handover
 - [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls.
