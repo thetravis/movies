@@ -1,0 +1,15 @@
+Tehtävä: Suunnittele ja toteuta API-palvelu, jota vasten API-client voi hakea elokuvia ja hallita niiden tietoja:
+
+Valitse yleisessä käytössä oleva protokolla, jolla client voi keskustella API:n kanssa (esimerkiksi REST tai GraphQL)
+Toteuta API Javalla. Suosittelemme sovelluskehyksen käyttämistä.
+
+- Palvelun käyttämä data on liitteenä movies-compact.json-tiedostossa
+- Ratkaise datan persistointi eli tallennus. 
+- Palvelun käyttötapaukset:
+  -- Listaa kaikki elokuvat (voit näyttää elokuvien oleelliset tiedot listauksessa)
+  -- Hae elokuvat, jotka osuvat clientin hakutermiin
+  -- Uuden elokuvan ja sen tietojen lisäys tietokantaan
+- Toteuta vähintään 1 yksikkötesti testaamaan haluamaasi ominaisuutta.
+- Huomioi toteutuksessa, että sovellusta mahdollisesti jatkokehittää joku muu.
+
+Ja lisäsaatteena tosiaan vielä, että kun AI:n käyttö on niin yleistä ja oikeastaan suotavaankin niin toivomme, että lyhyesti valmistaudut kertomaan missä ja miten AI:ta on tehtävänannossa käytetty. Jos käytössäsi on jotain AI-spesifejä toimintatapoja (tietyt työkalut, AGENTS.md, skillit, keskustelujen träkkäys, tms.) niin on vain plussaa, jos ne tulevat myös meidän nähtäville!
