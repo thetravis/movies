@@ -22,7 +22,7 @@ Additional requirements from `instructions.txt`:
 | Area | Choice | Reason |
 |---|---|---|
 | Language | Java 21 (LTS) | Required by current Spring Boot; modern language features (records etc.) |
-| Framework | Spring Boot (latest stable, pinned in `pom.xml`) | De-facto standard, fast to set up |
+| Framework | Spring Boot 4.1.1 | De-facto standard, fast to set up |
 | Build | Maven + Maven Wrapper (`mvnw`) | Requested; wrapper means no local Maven install needed |
 | API style | REST, **contract-first** with OpenAPI 3 | Spec is the single source of truth for the API |
 | Code generation | `openapi-generator-maven-plugin` (`spring` generator, `interfaceOnly`) | Generates API interfaces + DTOs at build time into `target/generated-sources` |
@@ -145,11 +145,11 @@ backend/
 - [x] `docker compose up -d` and verify connection.
 
 ### Phase 1 – Project skeleton
-- [ ] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver. (Flyway is added in Phase 3, Testcontainers in Phase 6; Actuator dropped as not needed.)
-- [ ] Add Maven Wrapper.
-- [ ] Move `resources/openapi` and `resources/data` under `src/main/resources`.
-- [ ] `application.yml` with datasource pointing to the compose DB (values overridable via env vars).
-- [ ] App starts and connects to the database.
+- [x] Generate Spring Boot project (Spring Initializr): Web, Validation, Data JPA, PostgreSQL driver. (Flyway is added in Phase 3, Testcontainers in Phase 6; Actuator dropped as not needed.)
+- [x] Add Maven Wrapper.
+- [x] Move `resources/openapi` and `resources/data` under `src/main/resources`.
+- [x] `application.yml` with datasource pointing to the compose DB (values overridable via env vars).
+- [x] App starts and connects to the database.
 
 ### Phase 2 – Contract first
 - [ ] Write `openapi.yaml` (endpoints + schemas + validation constraints + examples).
@@ -194,6 +194,6 @@ backend/
 
 ## 9. Open questions / decisions to confirm
 
-- Base package name (e.g. `fi.<name>.movies`).
+- ~~Base package name~~ → `com.example.movies` (Initializr default; groupId `com.example`).
 - Paging on the list endpoint: include from the start or return a plain list (20 rows)?
 - Should duplicate movies (same name + year) be rejected with `409 Conflict`?

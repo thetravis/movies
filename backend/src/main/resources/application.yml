@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: movies
+
+  # Defaults match docker-compose.yml; override with environment variables in other environments.
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:movies}
+    username: ${DB_USERNAME:movies}
+    password: ${DB_PASSWORD:movies}
+
+  jpa:
+    # Schema is managed by SQL migrations (Flyway, added in Phase 3), never by Hibernate.
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
