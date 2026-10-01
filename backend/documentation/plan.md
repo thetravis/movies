@@ -260,8 +260,10 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 - [x] Manually tested all endpoints and error cases with curl.
 
 ### Phase 6 – Tests
-- [ ] Unit tests: `MovieService` (Mockito), mapper, importer (normalization, skipping existing, skipping invalid).
-- [ ] Web slice tests: `@WebMvcTest` for controller (status codes, validation).
+- [x] Unit tests (Mockito): `MovieServiceTest` (validation with a real validator, duplicate, list vs. search, paging/sort, not found), `MovieImporterTest` (counts, typo fix, missing/non-array file, disabled).
+- [x] `MovieMapperTest` against the test container (mappers use repositories): trimming, blank → null, reuse vs. create of persons/genres, duplicates, invalid persons/genres left unsaved, all fields both ways, paging.
+- [x] `MoviesControllerTest` (`@WebMvcTest`, `MockMvcTester`, service mocked): routing, default paging, contract validation, 201 + Location, 400/404/409 Problem Details, DB details hidden.
+- [x] Sanity check of the tests by breaking production code (no trimming, duplicate actors allowed, no typo fix): each break failed the expected tests. Total: 55 tests.
 - [x] Testcontainers: shared PostgreSQL 17 test container (`TestcontainersConfiguration`, `@ServiceConnection`); tests no longer use the local compose database.
 - [x] Test data: `src/test/resources/data/movies-test.json` (copy of the original file).
 - [x] `MoviesApplicationTests`: full stack over HTTP (`RestTestClient`, random port) – import + idempotent re-import, data cleanup (typo fix, trimming, actor order), paging + sorting, search by synopsis/actor/director/genre, get, 404, create + Location, 409, 400 with field errors, invalid paging, contract + Swagger UI.

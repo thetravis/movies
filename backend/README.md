@@ -91,10 +91,20 @@ throwaway PostgreSQL 17 container with [Testcontainers](https://testcontainers.c
 downloads the `postgres:17-alpine` image; after that the container starts in a few seconds and is
 removed when the tests finish.
 
-- `MoviesApplicationTests` starts the whole application against the container, imports the test
-  data from [`src/test/resources/data/movies-test.json`](src/test/resources/data/movies-test.json)
-  and calls the API over HTTP (list, search, get, add, error responses, Swagger UI).
-- `MovieRepositoryTest` tests the database queries; each test is rolled back.
+| Test class | Kind | Database | What it covers |
+|---|---|---|---|
+| `MovieServiceTest` | unit (Mockito) | – | Validation rules, duplicate check, search vs. list, paging/sorting, not found |
+| `MovieImporterTest` | unit (Mockito) | – | Import counts (imported / existing / invalid), genre typo fix, missing or invalid file, disabled import |
+| `MoviesControllerTest` | web slice (`@WebMvcTest`) | – | Routing, contract validation, status codes, `Location` header, Problem Details for 400/404/409 |
+| `MovieMapperTest` | integration | container | MapStruct mapping: trimming, reuse/creation of persons and genres, duplicates, all fields both ways, paging |
+| `MovieRepositoryTest` | integration | container | Search query, paging, actor order, uniqueness; each test is rolled back |
+| `MoviesApplicationTests` | full stack over HTTP | container | Startup import of [`src/test/resources/data/movies-test.json`](src/test/resources/data/movies-test.json), list, search, get, add, error responses, Swagger UI |
+
+To run only the fast tests that don't need Docker:
+
+```shell
+.\mvnw test "-Dtest=MovieServiceTest,MovieImporterTest,MoviesControllerTest"
+```
 
 ## Movie data
 
