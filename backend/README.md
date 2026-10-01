@@ -83,7 +83,17 @@ The application starts on **http://localhost:8080**. Stop it with `Ctrl+C`.
 .\mvnw verify
 ```
 
-The current test starts the whole application, so **the database must be running**.
+The tests use the PostgreSQL database from `docker-compose.yml`, so **the database must be
+running**. Each repository test runs in a transaction that is rolled back, so the tests don't
+change the data in the database.
+
+## Database schema
+
+The schema is managed by [Liquibase](https://www.liquibase.com/). On startup the application
+applies any new changesets from
+[`src/main/resources/db/changelog`](src/main/resources/db/changelog) and records them in the
+`databasechangelog` table, so each changeset runs only once per database. To change the schema,
+add a new changeset file; never edit one that has already been applied.
 
 ## Stopping and resetting the database
 

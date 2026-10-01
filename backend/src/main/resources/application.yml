@@ -9,11 +9,16 @@ spring:
     password: ${DB_PASSWORD:movies}
 
   jpa:
-    # Schema is managed by Liquibase changesets (added in Phase 3), never by Hibernate.
+    # Schema is managed by Liquibase changesets (db/changelog), never by Hibernate.
+    # Hibernate only checks at startup that the entities match the tables.
     # Initial data is loaded by a Java importer from a configurable JSON file (Phase 4).
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     open-in-view: false
+    properties:
+      hibernate:
+        # Loads lazy collections (actors, genres) for many movies in one query instead of one per movie.
+        default_batch_fetch_size: 50
 
 # Swagger UI at /swagger-ui.html shows the contract file (served by OpenApiContractConfig),
 # not a spec generated from the code.

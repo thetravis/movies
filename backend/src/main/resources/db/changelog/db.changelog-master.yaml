@@ -1,0 +1,10 @@
+# Liquibase master changelog. Liquibase runs on application startup and applies each changeset
+# exactly once per database (tracked in the DATABASECHANGELOG table).
+#
+# Rules:
+# - Never edit a changeset that has already been applied; add a new file instead.
+# - Name new files with the next number, e.g. changes/002-add-something.sql, and include them below.
+databaseChangeLog:
+  - include:
+      file: changes/001-create-schema.sql
+      relativeToChangelogFile: true

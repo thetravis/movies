@@ -75,18 +75,25 @@ Normalized model (shows proper modelling and makes search over actors/genres pos
 ```
 movie (id PK, name, release_year, age_limit, rating, synopsis, director_id FK -> person)
 person (id PK, first_name, last_name)          -- actors and directors
-genre (id PK, name UNIQUE)
-movie_actor (movie_id FK, person_id FK, PK(movie_id, person_id))
+genre (id PK, name)
+movie_actor (movie_id FK, position, person_id FK, PK(movie_id, position), UNIQUE(movie_id, person_id))
 movie_genre (movie_id FK, genre_id FK, PK(movie_id, genre_id))
 ```
 
 Notes:
 
 - `year` is a reserved-ish word → column `release_year`.
-- Check constraints for `rating` (1–5) and `age_limit` (>= 0).
-- Unique constraint on movie `(name, release_year)` – identifies a movie; used by the importer to skip existing movies.
-- Persons (matched by first + last name) and genres (matched by name) are reused (find-or-create) when adding movies.
-- Indexes for search: `lower(name)` on movie (later possibly `pg_trgm` for `ILIKE '%term%'`).
+- Check constraints mirror the API contract: `release_year` 1888–2100, `age_limit` 0–21, `rating` 1–5.
+- Uniqueness is case-insensitive (unique indexes on `lower(...)`): movie `(name, release_year)`,
+  person `(first_name, last_name)`, genre `name`. The movie key is used by the importer to skip
+  existing movies and by `POST` to return `409`.
+- `movie_actor.position` keeps the actors' billing order (`@OrderColumn`); genres are returned sorted by name.
+- Persons and genres are reused (find-or-create, case-insensitive) when adding movies.
+- `synopsis` is `VARCHAR(2000)` (matches the contract's max length).
+- Search uses `LIKE '%term%'`, which can't use normal indexes; fine for this data size
+  (`pg_trgm` or full-text search is a possible extension).
+- Fetching: `director` is fetched with the movie (entity graph); actors and genres are loaded
+  lazily in batches (`hibernate.default_batch_fetch_size: 50`) to avoid N+1 queries.
 
 ### 4.1 Schema vs. data responsibilities
 
@@ -192,10 +199,11 @@ backend/
 - [x] Serve Swagger UI for the contract.
 
 ### Phase 3 – Persistence
-- [ ] Add Liquibase (`spring-boot-starter-liquibase`); master changelog + `001-create-schema.sql`.
-- [ ] Set `spring.jpa.hibernate.ddl-auto=validate` (app fails fast if entities and schema disagree).
-- [ ] JPA entities + repositories.
-- [ ] Search query (JPQL/Criteria, `lower(...) like`, `distinct`), avoid N+1 (`@EntityGraph`/fetch join).
+- [x] Add Liquibase (`spring-boot-starter-liquibase`); master changelog + `001-create-schema.sql`.
+- [x] Set `spring.jpa.hibernate.ddl-auto=validate` (app fails fast if entities and schema disagree).
+- [x] JPA entities + repositories.
+- [x] Search query (JPQL, `lower(...) like` with `exists` subqueries for actors/genres, so no duplicates); director via `@EntityGraph`, collections via batch fetching.
+- [x] Repository tests (`MovieRepositoryTest`, `@DataJpaTest` against the compose PostgreSQL, rolled back).
 
 ### Phase 4 – Data import
 Design in 4.1. The importer reuses `MovieService.create`, so build it together with or right after Phase 5.
