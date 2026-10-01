@@ -225,7 +225,10 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 ### Phase 6 – Tests
 - [ ] Unit tests: `MovieService` (Mockito), mapper, importer (normalization, skipping existing, skipping invalid).
 - [ ] Web slice tests: `@WebMvcTest` for controller (status codes, validation).
-- [ ] Optional integration test: add Testcontainers PostgreSQL, full flow (seed → list → search → create).
+- [x] Testcontainers: shared PostgreSQL 17 test container (`TestcontainersConfiguration`, `@ServiceConnection`); tests no longer use the local compose database.
+- [x] Test data: `src/test/resources/data/movies-test.json` (copy of the original file).
+- [x] `MoviesApplicationTests`: full stack over HTTP (`RestTestClient`, random port) – import + idempotent re-import, data cleanup (typo fix, trimming, actor order), paging + sorting, search by synopsis/actor/director/genre, get, 404, create + Location, 409, 400 with field errors, invalid paging, contract + Swagger UI.
+- [x] `MovieRepositoryTest` moved to the test container.
 
 ### Phase 7 – Documentation & handover
 - [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls, how to load a different JSON file, how to reset the DB (`docker compose down -v`).

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import com.example.movies.TestcontainersConfiguration;
 import com.example.movies.domain.Genre;
 import com.example.movies.domain.Movie;
 import com.example.movies.domain.Person;
@@ -14,18 +15,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 /**
- * Runs against the real PostgreSQL schema created by Liquibase (the database from
- * docker-compose.yml must be running). Every test runs in a transaction that is rolled back,
- * so existing data is not changed.
+ * Runs against the real PostgreSQL schema created by Liquibase, in the PostgreSQL test container
+ * (see {@link TestcontainersConfiguration}). Every test runs in a transaction that is rolled back,
+ * so data added by other test classes is not changed.
  */
 @DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE) // use the container, not an in-memory DB
+@Import(TestcontainersConfiguration.class)
 class MovieRepositoryTest {
 
     private static final PageRequest FIRST_PAGE = PageRequest.of(0, 20, Sort.by("name"));

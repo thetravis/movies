@@ -15,7 +15,7 @@ of truth, and the server interfaces and DTOs are generated from it at build time
 |---|---|
 | **JDK 21** | Java 21 exactly or newer. Java 17 is **not** enough: the project is compiled for Java 21 (`java.version` in `pom.xml`). A JRE is not enough either; you need a JDK. |
 | **`JAVA_HOME`** | Must point to the JDK 21 installation, e.g. `C:\Program Files\Java\jdk-21`. The Maven Wrapper and Maven use it to find Java. |
-| **Docker** (with Docker Compose) | Runs the PostgreSQL database. On Windows/macOS, **Docker Desktop must be running.** |
+| **Docker** (with Docker Compose) | Runs the PostgreSQL database, and a temporary test database during the tests. On Windows/macOS, **Docker Desktop must be running.** |
 | Maven 3.9+ *(optional)* | Not needed: the included Maven Wrapper (`mvnw` / `mvnw.cmd`) downloads the right Maven version automatically. |
 | Free ports | `5432` (PostgreSQL) and `8080` (the application). |
 
@@ -85,9 +85,16 @@ the database tables (first run only) and loads the movies from the bundled JSON 
 .\mvnw verify
 ```
 
-The tests use the PostgreSQL database from `docker-compose.yml`, so **the database must be
-running**. Each repository test runs in a transaction that is rolled back, and the movie import is
-switched off in tests, so the tests don't change the data in the database.
+The tests **don't use your local database**. Tests that need a database start their own
+throwaway PostgreSQL 17 container with [Testcontainers](https://testcontainers.com/), so
+**Docker must be running**, but the `movies-postgres` container doesn't need to be. The first run
+downloads the `postgres:17-alpine` image; after that the container starts in a few seconds and is
+removed when the tests finish.
+
+- `MoviesApplicationTests` starts the whole application against the container, imports the test
+  data from [`src/test/resources/data/movies-test.json`](src/test/resources/data/movies-test.json)
+  and calls the API over HTTP (list, search, get, add, error responses, Swagger UI).
+- `MovieRepositoryTest` tests the database queries; each test is rolled back.
 
 ## Movie data
 
