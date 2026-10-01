@@ -33,7 +33,7 @@ Additional requirements from `instructions.txt`:
 | Validation | Jakarta Bean Validation (constraints generated from the spec) | Input validation driven by the contract |
 | Errors | RFC 7807 `ProblemDetail` | Standard error format |
 | Tests | JUnit 5, Mockito, AssertJ, `@WebMvcTest`, Testcontainers (PostgreSQL) | Unit + slice + integration tests |
-| API docs | Swagger UI serving the contract (springdoc or static) | Easy manual testing for reviewers |
+| API docs | Swagger UI (springdoc) showing the contract file itself (`/swagger-ui.html`, spec at `/openapi.yaml`) | Easy manual testing for reviewers; docs never drift from the contract |
 
 ### Prerequisites on the dev machine
 
@@ -112,26 +112,32 @@ Notes:
   Java code inside a changeset (`customChange`) would tie old migrations to current entity
   classes, which breaks when they evolve.
 
-## 5. API contract (draft)
+## 5. API contract
 
-Spec lives in `src/main/resources/openapi/openapi.yaml` (moved from `resources/openapi/`).
+Spec: `src/main/resources/openapi/openapi.yaml` (OpenAPI 3.0.3).
 
 | Method | Path | Description | Responses |
 |---|---|---|---|
-| `GET` | `/api/movies` | List movies. Optional `search` query param filters results. Optional `page`/`size` for paging. | `200` list of movies |
+| `GET` | `/api/movies` | List movies ordered by name. Optional `search` filters results; `page` (default 0) and `size` (default 20, max 100) for paging. | `200` `MoviePage`, `400` |
 | `GET` | `/api/movies/{id}` | Get a single movie | `200`, `404` |
-| `POST` | `/api/movies` | Add a new movie | `201` + `Location` header, `400` |
+| `POST` | `/api/movies` | Add a new movie | `201` + `Location` header, `400`, `409` (same name + year exists) |
 
 Search semantics (`?search=term`): case-insensitive partial match against movie name, synopsis,
 genre, actor names and director name. Combining with other filters (genre, year) is a possible
 extension.
 
-Schemas: `Movie` (response, includes `id`), `NewMovie` (request, no `id`), `Person`, `Problem`.
+Schemas: `Movie` (response, includes `id`), `NewMovie` (request, no `id`), `MoviePage` (`items`, `page`, `size`, `totalItems`, `totalPages`), `Person`, `Problem` (RFC 9457, with optional field-level `errors`), `FieldError`.
 Genres as plain strings (not enum) so new genres can be added without a contract change.
 
-Generated code: API interface (e.g. `MoviesApi`) + model DTOs in package
-`...generated` – implemented by a hand-written controller. Mapping DTO ↔ entity with a
-small mapper class (or MapStruct).
+Generated code (`target/generated-sources/openapi`, regenerated on every build, never edited):
+
+- `com.example.movies.generated.api.MoviesApi` – interface implemented by a hand-written controller.
+- `com.example.movies.generated.model.*Dto` – DTOs (`Dto` suffix avoids clashes with JPA entities).
+- Generator options: `interfaceOnly`, `skipDefaultInterface` (compiler forces every operation to be
+  implemented), `useSpringBoot4` + `useJackson3`, Bean Validation annotations with Spring built-in
+  method validation, no swagger annotations.
+
+Mapping DTO ↔ entity with a small hand-written mapper class.
 
 ## 6. Project structure
 
@@ -180,10 +186,10 @@ backend/
 - [x] App starts and connects to the database.
 
 ### Phase 2 – Contract first
-- [ ] Write `openapi.yaml` (endpoints + schemas + validation constraints + examples).
-- [ ] Configure `openapi-generator-maven-plugin` (`interfaceOnly`, Spring Boot 4 support, `useTags`, `openApiNullable=false`, Jakarta validation).
-- [ ] `mvnw compile` generates interfaces/DTOs.
-- [ ] Serve Swagger UI for the contract.
+- [x] Write `openapi.yaml` (endpoints + schemas + validation constraints + examples).
+- [x] Configure `openapi-generator-maven-plugin` (`interfaceOnly`, Spring Boot 4 support, `useTags`, `openApiNullable=false`, Jakarta validation).
+- [x] `mvnw compile` generates interfaces/DTOs.
+- [x] Serve Swagger UI for the contract.
 
 ### Phase 3 – Persistence
 - [ ] Add Liquibase (`spring-boot-starter-liquibase`); master changelog + `001-create-schema.sql`.
@@ -226,6 +232,6 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 ## 9. Open questions / decisions to confirm
 
 - ~~Base package name~~ → `com.example.movies` (Initializr default; groupId `com.example`).
-- Paging on the list endpoint: include from the start or return a plain list (20 rows)?
-- Should duplicate movies (same name + year) be rejected with `409 Conflict` on `POST`? (The importer skips them; the DB unique constraint enforces it either way.)
+- ~~Paging on the list endpoint~~ → yes, `page` + `size` with a `MoviePage` response.
+- ~~Duplicate movies on `POST`~~ → rejected with `409 Conflict` (the importer skips them; the DB unique constraint enforces it either way).
 - ~~Flyway vs. Liquibase, how to load initial data~~ → Liquibase for schema, configurable Java importer for data (see 4.1).

@@ -1,0 +1,304 @@
+openapi: 3.0.3
+info:
+  title: Movies API
+  version: 1.0.0
+  description: |
+    API for listing, searching and adding movies.
+
+    This file is the **contract** of the API (contract-first): server interfaces and DTOs are
+    generated from it at build time. Change this file first, then implement the change.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Movies
+    description: Listing, searching and adding movies
+
+paths:
+  /api/movies:
+    get:
+      tags: [Movies]
+      operationId: listMovies
+      summary: List movies, optionally filtered by a search term
+      description: |
+        Returns movies ordered by name, one page at a time.
+
+        When `search` is given, only movies matching the term are returned. Matching is
+        case-insensitive and partial, against the movie name, synopsis, genres, actor names
+        and director name.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          description: Search term. Blank or missing means no filtering.
+          schema:
+            type: string
+            maxLength: 100
+          example: wallace
+        - name: page
+          in: query
+          required: false
+          description: Zero-based page index.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          description: Page size.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: A page of movies.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoviePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      tags: [Movies]
+      operationId: createMovie
+      summary: Add a new movie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewMovie'
+      responses:
+        '201':
+          description: Movie created.
+          headers:
+            Location:
+              description: URL of the created movie.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: A movie with the same name and year already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /api/movies/{id}:
+    get:
+      tags: [Movies]
+      operationId: getMovie
+      summary: Get a single movie
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: The movie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '404':
+          description: Movie not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  responses:
+    BadRequest:
+      description: The request is invalid (e.g. failed validation).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    Person:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Steve
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Box
+
+    NewMovie:
+      type: object
+      description: A movie to be added. Same fields as `Movie` without the generated `id`.
+      required: [name, year, genres, ageLimit, rating, director]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: The Curse of the Were-Rabbit
+        year:
+          type: integer
+          format: int32
+          description: Release year.
+          minimum: 1888
+          maximum: 2100
+          example: 2005
+        genres:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+          example: [Animation, Adventure, Comedy]
+        ageLimit:
+          type: integer
+          format: int32
+          description: Minimum recommended age.
+          minimum: 0
+          maximum: 21
+          example: 12
+        rating:
+          type: integer
+          format: int32
+          description: Rating on a scale of 1 to 5.
+          minimum: 1
+          maximum: 5
+          example: 4
+        actors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        director:
+          $ref: '#/components/schemas/Person'
+        synopsis:
+          type: string
+          maxLength: 2000
+          example: Wallace and his loyal dog, Gromit, set out to discover the mystery behind the garden sabotage.
+
+    Movie:
+      type: object
+      required: [id, name, year, genres, ageLimit, rating, actors, director]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 2
+        name:
+          type: string
+          example: The Curse of the Were-Rabbit
+        year:
+          type: integer
+          format: int32
+          example: 2005
+        genres:
+          type: array
+          items:
+            type: string
+          example: [Animation, Adventure, Comedy]
+        ageLimit:
+          type: integer
+          format: int32
+          example: 12
+        rating:
+          type: integer
+          format: int32
+          example: 4
+        actors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        director:
+          $ref: '#/components/schemas/Person'
+        synopsis:
+          type: string
+          example: Wallace and his loyal dog, Gromit, set out to discover the mystery behind the garden sabotage.
+
+    MoviePage:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Movie'
+        page:
+          type: integer
+          format: int32
+          description: Zero-based page index.
+          example: 0
+        size:
+          type: integer
+          format: int32
+          description: Requested page size.
+          example: 20
+        totalItems:
+          type: integer
+          format: int64
+          description: Total number of movies matching the request.
+          example: 20
+        totalPages:
+          type: integer
+          format: int32
+          example: 1
+
+    Problem:
+      type: object
+      description: Error response in RFC 9457 (Problem Details) format.
+      properties:
+        type:
+          type: string
+          format: uri
+          example: about:blank
+        title:
+          type: string
+          example: Bad Request
+        status:
+          type: integer
+          format: int32
+          example: 400
+        detail:
+          type: string
+          example: Request validation failed.
+        instance:
+          type: string
+          format: uri
+          example: /api/movies
+        errors:
+          type: array
+          description: Field-level validation errors, present only for validation failures.
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          example: rating
+        message:
+          type: string
+          example: must be less than or equal to 5

@@ -14,3 +14,9 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+
+# Swagger UI at /swagger-ui.html shows the contract file (served by OpenApiContractConfig),
+# not a spec generated from the code.
+springdoc:
+  swagger-ui:
+    url: /openapi.yaml
