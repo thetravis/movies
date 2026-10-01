@@ -231,6 +231,7 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 - [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls, how to load a different JSON file, how to reset the DB (`docker compose down -v`).
 - [ ] `AGENTS.md`/`CLAUDE.md`: conventions and commands for AI agents (contract-first rule: change spec first, then regenerate).
 - [ ] `documentation/ai-usage.md`: which tools were used, how, and what was reviewed/changed manually.
+- [x] `tools/export-prompts.mjs` → `documentation/ai-prompts.md`: all prompts, answers to Claude's questions, results and files per step. **Re-run at the end** (`node backend/tools/export-prompts.mjs`); session transcripts are deleted by Claude Code after 30 days.
 - [ ] Optional: Dockerize the app itself and add it to compose.
 
 ## 8. Possible extensions (out of scope unless time allows)

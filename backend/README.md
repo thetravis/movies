@@ -175,3 +175,4 @@ match.
 
 - [`documentation/instructions.txt`](documentation/instructions.txt) – the original task
 - [`documentation/plan.md`](documentation/plan.md) – implementation plan and design decisions
+- [`documentation/ai-prompts.md`](documentation/ai-prompts.md) – all prompts given to the AI assistant (Claude Code), generated with `node backend/tools/export-prompts.mjs` from the repository root
