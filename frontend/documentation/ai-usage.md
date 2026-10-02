@@ -75,5 +75,4 @@ reviewing the result in the browser and committing.
 
 ## Developer's notes
 
-*To be written by the developer: own review findings, what was changed by hand, and reflections on
-the frontend work.*
+Again, I mostly set up the requirements for the project and let Claude do the lifting. I feel like I'm a vibe coder now. My biggest contribution was to make some notes about the code we generated during the backend development and we returned back to update the contract. This is due to my own laziness of not reading through the generated code properly and this led me to go back to changing the contract. In a project of this size it was not a problem but in a real world situation we would not be able to change the contract after it's published. I'm still surpirsed how quickly Claude was able to produce the code, it also wrote the test and even ran some mutation tests during the development. 
