@@ -94,5 +94,4 @@ Being explicit about these is part of using AI responsibly:
 
 ## Developer's notes
 
-*To be written by the developer: own review findings, what was changed by hand, and reflections
-(what worked well with the AI, what didn't, what would be done differently).*
+Honestly, I did nothing but considered few options, laid out the requirements for the application and let the AI do the heavy lifting while steering it at some points. It seems that Claude Code has improved since I last worked with it and we did not fall into the loop of making changes and then fixing new problems caused by the changes. The early stage of the project might have helped with this too, though I'm surprised by the amount of code that I could produce just in about 4 hours. Next, I will spend 4 hours reviewing the code. 
