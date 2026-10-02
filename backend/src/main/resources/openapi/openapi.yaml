@@ -7,6 +7,10 @@ info:
 
     This file is the **contract** of the API (contract-first): server interfaces and DTOs are
     generated from it at build time. Change this file first, then implement the change.
+
+    Response schemas list every field as required: responses always contain all fields, and a field
+    without a value is `null` (marked `nullable`). Request schemas may have optional fields, which
+    clients can leave out or send as `null`.
 servers:
   - url: http://localhost:8080
     description: Local development
@@ -189,18 +193,22 @@ components:
           example: 4
         actors:
           type: array
+          nullable: true
+          description: Optional; may be left out or null (no actors). Billing order, lead actor first.
           items:
             $ref: '#/components/schemas/Person'
         director:
           $ref: '#/components/schemas/Person'
         synopsis:
           type: string
+          nullable: true
+          description: Optional; may be left out or null. Blank text is stored as null.
           maxLength: 2000
           example: Wallace and his loyal dog, Gromit, set out to discover the mystery behind the garden sabotage.
 
     Movie:
       type: object
-      required: [id, name, year, genres, ageLimit, rating, actors, director]
+      required: [id, name, year, genres, ageLimit, rating, actors, director, synopsis]
       properties:
         id:
           type: integer
@@ -234,6 +242,8 @@ components:
           $ref: '#/components/schemas/Person'
         synopsis:
           type: string
+          nullable: true
+          description: Null when the movie has no synopsis.
           example: Wallace and his loyal dog, Gromit, set out to discover the mystery behind the garden sabotage.
 
     MoviePage:
@@ -267,6 +277,7 @@ components:
     Problem:
       type: object
       description: Error response in RFC 9457 (Problem Details) format.
+      required: [type, title, status, detail, instance, errors]
       properties:
         type:
           type: string
@@ -281,6 +292,7 @@ components:
           example: 400
         detail:
           type: string
+          nullable: true
           example: Request validation failed.
         instance:
           type: string
@@ -288,7 +300,8 @@ components:
           example: /api/movies
         errors:
           type: array
-          description: Field-level validation errors, present only for validation failures.
+          nullable: true
+          description: Field-level validation errors; null when the error is not a validation failure.
           items:
             $ref: '#/components/schemas/FieldError'
 

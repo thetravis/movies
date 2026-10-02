@@ -167,6 +167,38 @@ class MoviesApplicationTests {
     }
 
     @Test
+    void acceptsMissingOrNullOptionalFields() {
+        // Raw JSON on purpose: a serialized NewMovieDto always contains every field, but other
+        // clients may leave optional fields out. Both forms must be accepted and stored the same way.
+        String withoutOptionalFields = """
+                {"name": "Optional Fields Test A", "year": 2001, "genres": ["Drama"], "ageLimit": 12, "rating": 3,
+                 "director": {"firstName": "Jane", "lastName": "Roe"}}""";
+        String withNullOptionalFields = """
+                {"name": "Optional Fields Test B", "year": 2001, "genres": ["Drama"], "ageLimit": 12, "rating": 3,
+                 "director": {"firstName": "Jane", "lastName": "Roe"}, "actors": null, "synopsis": null}""";
+
+        for (String json : List.of(withoutOptionalFields, withNullOptionalFields)) {
+            URI location = client.post().uri("/api/movies")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(json)
+                    .exchange()
+                    .expectStatus().isCreated()
+                    .expectBody()
+                    .returnResult().getResponseHeaders().getLocation();
+
+            client.get().uri(location)
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody()
+                    .jsonPath("$.synopsis").isEqualTo(null)
+                    .jsonPath("$.actors").isEqualTo(List.of())
+                    // Present as null, not left out (the contract has no optional response fields).
+                    .consumeWith(response -> assertThat(new String(response.getResponseBodyContent()))
+                            .contains("\"synopsis\":null"));
+        }
+    }
+
+    @Test
     void rejectsDuplicateMovieWithConflict() {
         NewMovieDto duplicate = new NewMovieDto("VERTIGO", 1958, Set.of("Mystery"), 12, 5,
                 new PersonDto("Alfred", "Hitchcock"));

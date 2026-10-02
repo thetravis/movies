@@ -48,6 +48,12 @@ Always run `./mvnw verify` before finishing a change; all tests must pass.
    the generator configuration in `pom.xml` or a template override in `src/main/openapi-templates`
    (each override documents why it exists).
 3. The controller only delegates to the service; no business logic in `api`.
+4. **No optional fields in response schemas.** List every field in `required`; a value that may be
+   missing is `nullable: true` and sent as `null`, never left out (all generated models carry
+   `@JsonInclude(ALWAYS)`). Request schemas may have optional fields (missing → `null` in Java,
+   missing lists → empty list). Error responses are built as the generated `ProblemDto` in
+   `ApiExceptionHandler`, never as Spring's `ProblemDetail` directly (it leaves fields out).
+   Generated code uses JSpecify `@Nullable` (`useJspecify`).
 
 ### Adding a field to a movie
 
@@ -111,3 +117,6 @@ The build and startup enforce every step; follow the errors:
 - Manual checks against the local database create real data: clean it up afterwards, and don't
   delete data you didn't create.
 - `.env` (database credentials for Docker Compose) is git-ignored; never commit it.
+- VS Code's Java extension compiles into the same `target/` folder as Maven. If a build fails with
+  "Unresolved compilation problem" (an Eclipse compiler message) or a `NoClassDefFoundError` for one
+  of our own classes, run `./mvnw clean verify`.

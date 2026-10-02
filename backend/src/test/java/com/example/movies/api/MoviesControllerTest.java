@@ -104,6 +104,18 @@ class MoviesControllerTest {
     }
 
     @Test
+    void getMovieAlwaysIncludesNullableFields() {
+        // The contract makes "synopsis" required and nullable: it must be present as null, not left out.
+        when(movieService.getMovie(1L)).thenReturn(vertigo());
+
+        assertThat(mvc.get().uri("/api/movies/1"))
+                .hasStatusOk()
+                .bodyJson()
+                .isLenientlyEqualTo("""
+                        {"synopsis": null}""");
+    }
+
+    @Test
     void getMovieReturnsNotFoundProblem() {
         when(movieService.getMovie(99L)).thenThrow(new MovieNotFoundException(99L));
 
@@ -111,9 +123,10 @@ class MoviesControllerTest {
                 .hasStatus(HttpStatus.NOT_FOUND)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .bodyJson()
-                .isLenientlyEqualTo("""
-                        {"status": 404, "title": "Not Found", "detail": "Movie with id 99 was not found.",
-                         "instance": "/api/movies/99"}""");
+                // Strict: exactly the fields of the contract's Problem schema, all present.
+                .isStrictlyEqualTo("""
+                        {"type": "about:blank", "title": "Not Found", "status": 404,
+                         "detail": "Movie with id 99 was not found.", "instance": "/api/movies/99", "errors": null}""");
     }
 
     // --- POST /api/movies ----------------------------------------------------------------------
@@ -146,7 +159,11 @@ class MoviesControllerTest {
     void createMovieRejectsMalformedJson() {
         assertThat(mvc.post().uri("/api/movies").contentType(MediaType.APPLICATION_JSON).content("{\"name\":"))
                 .hasStatus(HttpStatus.BAD_REQUEST)
-                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
+                // Errors raised by Spring itself are converted to the contract's Problem as well.
+                .bodyJson()
+                .isLenientlyEqualTo("""
+                        {"type": "about:blank", "title": "Bad Request", "status": 400, "instance": "/api/movies", "errors": null}""");
         verifyNoInteractions(movieService);
     }
 
@@ -189,7 +206,7 @@ class MoviesControllerTest {
 
     private static MovieDto vertigo() {
         return new MovieDto(1L, "Vertigo", 1958, List.of("Mystery"), 12, 5, List.of(),
-                new PersonDto("Alfred", "Hitchcock"));
+                new PersonDto("Alfred", "Hitchcock"), null);
     }
 
     private static MoviePageDto page(MovieDto... movies) {

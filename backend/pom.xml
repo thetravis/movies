@@ -139,6 +139,14 @@
 								<annotationLibrary>none</annotationLibrary>
 								<documentationProvider>none</documentationProvider>
 								<hideGenerationTimestamp>true</hideGenerationTimestamp>
+								<!-- JSpecify @Nullable instead of Spring's deprecated org.springframework.lang.Nullable. -->
+								<useJspecify>true</useJspecify>
+								<!-- Every field of every model is always written, also when null: response schemas list all
+								     fields as required, and "no value" is sent as null, never as a missing field. One
+								     class-level annotation instead of per-field ones, so the global Jackson setting can't
+								     change it. -->
+								<generateJsonIncludeAnnotations>false</generateJsonIncludeAnnotations>
+								<additionalModelTypeAnnotations>@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)</additionalModelTypeAnnotations>
 							</configOptions>
 						</configuration>
 					</execution>

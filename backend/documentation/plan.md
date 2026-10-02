@@ -276,9 +276,39 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 - [x] `tools/export-prompts.mjs` → `documentation/ai-prompts.md`: all prompts, answers to Claude's questions, results and files per step. **Re-run at the end** (`node backend/tools/export-prompts.mjs`); session transcripts are deleted by Claude Code after 30 days.
 - [ ] Optional (not done): Dockerize the app itself and add it to compose.
 
+### Follow-up – changes made during frontend development
+
+- [x] **Every response field is always present.** The generated TypeScript types showed that the
+  backend sent `"synopsis": null` although the contract declared `synopsis` optional. Decision
+  (developer): response schemas have **no optional fields** – the contract lists the fields that
+  are there, and a value that may be missing is `null`, never a missing field (missing fields break
+  other clients). Request schemas may have optional fields (missing → `null` in Java; missing lists
+  → empty list).
+  - Contract: all fields of `Movie`, `MoviePage`, `Person`, `Problem`, `FieldError` are `required`;
+    `Movie.synopsis`, `Problem.detail` and `Problem.errors` are `nullable`. `NewMovie.synopsis` and
+    `NewMovie.actors` are optional and `nullable`. The rule is stated in the contract's description.
+  - Generator: one class-level `@JsonInclude(ALWAYS)` on every generated model
+    (`additionalModelTypeAnnotations`; `generateJsonIncludeAnnotations=false`). The per-field
+    annotations of `generateJsonIncludeAnnotations=true` were tried first, but they give required
+    non-nullable fields `NON_NULL`. Verified: with `spring.jackson.default-property-inclusion=non_null`
+    the responses still contain every field. A single global setting
+    (`spring.jackson.default-property-inclusion: always` in `application.yml`) was considered as a
+    shorter alternative; the developer kept the per-class annotation because it holds regardless of
+    the global configuration (the long annotation only appears in `pom.xml` and generated code).
+  - Errors: Spring's `ProblemDetail` leaves empty fields out (and in Spring 7 has no `type` unless
+    set), so `ApiExceptionHandler.handleExceptionInternal` converts every error – also Spring's own
+    (type mismatch, malformed JSON, unknown path) – to the generated `ProblemDto`; `type` defaults to
+    `about:blank` (RFC 9457).
+  - Tests: `getMovieAlwaysIncludesNullableFields`, strict check of the full `Problem` shape for a
+    `404`, Problem shape for Spring's own errors, and `acceptsMissingOrNullOptionalFields` (full
+    stack, raw JSON: a `NewMovie` without `synopsis`/`actors` and one with explicit `null`s are both
+    accepted and returned with `"synopsis": null`, `"actors": []`).
+- [x] **JSpecify instead of deprecated `org.springframework.lang.Nullable`** in generated code:
+  generator option `useJspecify=true`. No deprecation warnings left in the build. 57 tests.
+
 ## 8. Possible extensions (out of scope unless time allows)
 
-- Update/delete movies (`PUT`/`DELETE`).
+- Update/delete movies. Developer's plan: partial updates with `PATCH` and an `UpdateMovie` schema where only the fields present in the request are changed. That needs "field missing" and "field set to null" to be distinguishable in Java, e.g. with the generator's `openApiNullable` (`JsonNullable<T>`) for that schema.
 - Filters (genre, year range, age limit) and sorting.
 - Full-text search (`tsvector`) or `pg_trgm` index.
 - Authentication for write operations.

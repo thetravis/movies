@@ -168,11 +168,13 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/movies" -ContentT
 Rules for a new movie: `name`, `year` (1888–2100), `genres` (at least one), `ageLimit` (0–21),
 `rating` (1–5) and `director` are required; `actors` and `synopsis` are optional. Text is trimmed,
 existing actors, directors and genres are reused (matched ignoring case), and repeated actors or
-genres are stored once. Invalid requests get a `400` with a list of field errors:
+genres are stored once. Responses always contain every field of the contract; a field without a
+value is `null` (also in error responses, e.g. `"errors": null` when the error is not a validation
+failure). Invalid requests get a `400` with a list of field errors:
 
 ```json
-{"status": 400, "title": "Bad Request", "detail": "Request validation failed.", "instance": "/api/movies",
- "errors": [{"field": "rating", "message": "must be less than or equal to 5"}]}
+{"type": "about:blank", "title": "Bad Request", "status": 400, "detail": "Request validation failed.",
+ "instance": "/api/movies", "errors": [{"field": "rating", "message": "must be less than or equal to 5"}]}
 ```
 
 ## Architecture
