@@ -105,12 +105,13 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 - [x] Tests (`MovieList.search.test.tsx`, 10 tests, 24 in total): one request for the final term only, new search from page 1, no-match state, clearing, spaces-only, starting from URL values, invalid URL values, paging/size recorded in the URL and Back, search box restored on Back without resetting the URL, page beyond the last. The mock API (`src/test/handlers.ts`) filters by `search`; the test setup resets the URL after each test (jsdom keeps it). Checked by breaking four behaviours on purpose (no delay, page not reset, Back ignored, box not restored): each failed the expected tests.
 
 ### Phase 5 – Add a movie
-- [ ] Form matching the contract's `NewMovie`: name, year, genres, age limit, rating, director, actors (add/remove rows), synopsis.
-- [ ] Client-side checks mirroring the contract (required fields, ranges) for immediate feedback; the backend stays the authority.
-- [ ] Show the backend's `400` field errors next to the fields (`Problem.errors[].field`, e.g. `director.firstName`, `actors[0].lastName`; `errors` is `null` for non-validation errors), and the `409` duplicate message.
-- [ ] Optional fields: an empty synopsis is sent as `null` and an empty actor list as `[]` (both accepted by the backend; it also trims text and stores blank text as `null`).
-- [ ] After success: show the new movie and refresh the list.
-- [ ] Tests for the form, including server-side errors.
+- [x] `MovieForm` matching the contract's `NewMovie`: name, year, genres (comma-separated), age limit, rating (1–5), director, actors (add/remove rows; empty rows ignored), synopsis. Opened with "Add a movie", closed with Cancel. No form library: plain React state; the rules live in a React-free module (`movieFormModel.ts`).
+- [x] Client-side checks mirroring the contract (required, ranges, whole numbers, lengths) shown next to the fields; editing a field clears its error; the first invalid field gets the focus. Labels, hints and errors are connected for screen readers (`aria-invalid`, `aria-describedby`).
+- [x] Show the backend's `400` field errors next to the fields (`Problem.errors[].field`, e.g. `director.firstName`, `actors[0].lastName`; `errors` is `null` for non-validation errors), and the `409` duplicate message. Checked against the real backend: an invalid genre comes as `genres[]`, mapped to the Genres field; unknown paths are listed at the top of the form.
+- [x] Optional fields: an empty synopsis is sent as `null` and an empty actor list as `[]` (both accepted by the backend; it also trims text and stores blank text as `null`).
+- [x] After success: the form closes, a notice says "Added "Jaws" (1975)." (`role="status"`), and all movie lists are reloaded (`useCreateMovie` invalidates the movie queries). Saving disables the buttons (no double submit). `409` and network errors appear on top of the form, which keeps the input.
+- [x] Tests: `movieFormModel.test.ts` (18: rules incl. range limits, conversion to `NewMovie`, genre parsing, mapping of backend paths) and `MovieForm.test.tsx` (10, through `App`: exact request body, `null`/empty optional fields, client errors + focus, error cleared on edit, backend field errors + focus, `409`, network error, no double submit, actor rows, Cancel). 52 tests in total. Checked by breaking five behaviours on purpose (focus, list refresh, `null` synopsis, double submit, `genres[]` mapping): each failed the expected tests.
+- [x] **Finding:** `movieForm.ts` and `MovieForm.tsx` differed only in letter case; Windows ignores case, so the import resolved to the wrong file. The logic module is now `movieFormModel.ts`.
 
 ### Phase 6 – Documentation & handover
 - [ ] `frontend/README.md`: requirements, install, run (with the backend), test, build.

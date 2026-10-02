@@ -1,0 +1,97 @@
+.form {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  max-width: 48rem;
+}
+
+.form h2 {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  min-width: 7rem;
+}
+
+.wide {
+  flex: 1 1 14rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  font: inherit;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+}
+
+.field [aria-invalid='true'] {
+  border-color: var(--error-text);
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--error-text);
+}
+
+.fieldset {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+}
+
+.fieldset > button {
+  margin-bottom: 0.75rem;
+}
+
+.actor {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.actor > div {
+  flex: 1;
+}
+
+.actor > button {
+  margin-top: 1.6rem;
+}
+
+.formError {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--error-border);
+  border-radius: 0.375rem;
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}

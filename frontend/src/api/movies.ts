@@ -1,7 +1,7 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from './client'
 import { ApiError, toApiError, toNetworkError } from './errors'
-import type { ListMoviesParams, MoviePage } from './types'
+import type { ListMoviesParams, Movie, MoviePage, NewMovie } from './types'
 
 /** TanStack Query keys for movie data; one place, so invalidation can't miss a key. */
 export const movieKeys = {
@@ -35,5 +35,28 @@ export function useMovies(params: ListMoviesParams) {
     queryKey: movieKeys.list(params),
     queryFn: ({ signal }) => fetchMovies(params, signal),
     placeholderData: keepPreviousData,
+  })
+}
+
+/** `POST /api/movies`. Throws an {@link ApiError} on failure (e.g. `400` with field errors, `409` duplicate). */
+export async function createMovie(newMovie: NewMovie): Promise<Movie> {
+  let result
+  try {
+    result = await apiClient.POST('/api/movies', { body: newMovie })
+  } catch (cause) {
+    throw toNetworkError(cause)
+  }
+  if (result.data === undefined) {
+    throw toApiError(result.error, result.response)
+  }
+  return result.data
+}
+
+/** Adds a movie; afterwards all movie lists are reloaded, so the new movie shows up. */
+export function useCreateMovie() {
+  const queryClient = useQueryClient()
+  return useMutation<Movie, ApiError, NewMovie>({
+    mutationFn: createMovie,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: movieKeys.all }),
   })
 }
