@@ -9,5 +9,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
   cleanup()
+  // The movie list keeps its state in the URL; jsdom would carry it over to the next test.
+  window.history.replaceState(null, '', '/')
 })
 afterAll(() => server.close())

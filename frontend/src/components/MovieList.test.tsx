@@ -1,36 +1,12 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { delay, http, HttpResponse } from 'msw'
+import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
-import type { Movie } from '../api/types'
-import { aMovie, aPage, aProblem } from '../test/data'
+import { aMovie, aProblem } from '../test/data'
+import { manyMovies, serveMovies } from '../test/handlers'
 import { renderWithQueryClient } from '../test/render'
 import { server } from '../test/server'
 import { MovieList } from './MovieList'
-
-/**
- * Serves `movies` like the backend does: paged by the `page` and `size` query parameters.
- * Returns the list of requested URLs, so tests can check what the component asked for.
- */
-function serveMovies(movies: Movie[], { latency = 0 } = {}) {
-  const requests: URL[] = []
-  server.use(
-    http.get('*/api/movies', async ({ request }) => {
-      const url = new URL(request.url)
-      requests.push(url)
-      const page = Number(url.searchParams.get('page') ?? 0)
-      const size = Number(url.searchParams.get('size') ?? 20)
-      await delay(latency)
-      const items = movies.slice(page * size, (page + 1) * size)
-      return HttpResponse.json(aPage(items, { page, size, totalItems: movies.length }))
-    }),
-  )
-  return requests
-}
-
-function manyMovies(count: number): Movie[] {
-  return Array.from({ length: count }, (_, i) => aMovie({ name: `Movie ${String(i + 1).padStart(2, '0')}` }))
-}
 
 function movieRows() {
   // The first row is the header.

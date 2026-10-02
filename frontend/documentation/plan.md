@@ -98,11 +98,11 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 - [x] **Developer request:** the cut synopsis could not be read in full. Clicking a row now expands it to the whole synopsis, clicking again collapses it (`Synopsis` component; expanded rows kept in `MovieTable` state). For keyboard and screen readers a "Show more / Show less" button (`aria-expanded`) appears when the text is actually cut off (measured in the browser, re-measured on resize). A click that ends a text selection does not toggle the row. 5 tests (`MovieTable.test.tsx`; heights stubbed, as jsdom does no layout), 14 in total.
 
 ### Phase 4 – Search
-- [ ] Search box; search as you type with a short debounce (~300 ms).
-- [ ] A new search term goes back to the first page.
-- [ ] `search` and `page` in the URL query string, so reload, back/forward and sharing a link work.
-- [ ] "No movies match" state.
-- [ ] Tests for search.
+- [x] `SearchBox` (`type="search"`, `maxLength` 100 as in the contract); searches 300 ms after typing pauses (`useDebouncedValue`), so only the final term is requested. Spaces only = no search. The box stays visible in every state (loading, error, no results).
+- [x] A new search term goes back to the first page.
+- [x] `search`, `page` and `size` in the URL (`?search=war&page=2&size=50`) with a small hook on the History API (`useMovieListParams`) – no router library for a single page. Page is 1-based in the URL, 0-based in the API; defaults are left out; invalid values fall back to defaults. Paging and page size add history entries (Back returns to the previous page); search replaces the current entry (Back doesn't step through every typed word). Back/Forward (`popstate`) also restores the search box. A page beyond the last one (old link) offers "Go to the first page".
+- [x] "No movies match "term"." state.
+- [x] Tests (`MovieList.search.test.tsx`, 10 tests, 24 in total): one request for the final term only, new search from page 1, no-match state, clearing, spaces-only, starting from URL values, invalid URL values, paging/size recorded in the URL and Back, search box restored on Back without resetting the URL, page beyond the last. The mock API (`src/test/handlers.ts`) filters by `search`; the test setup resets the URL after each test (jsdom keeps it). Checked by breaking four behaviours on purpose (no delay, page not reset, Back ignored, box not restored): each failed the expected tests.
 
 ### Phase 5 – Add a movie
 - [ ] Form matching the contract's `NewMovie`: name, year, genres, age limit, rating, director, actors (add/remove rows), synopsis.
