@@ -20,7 +20,8 @@ up as a compile error in the frontend, just as it does in the backend.
 | Language | TypeScript | Requested; types generated from the contract |
 | UI | React 19 | Requested |
 | Package manager | npm | Requested (Node 24 / npm 11 installed) |
-| Build tool / dev server | **Vite** (`react-ts` template) | Current standard for new React projects (Create React App is deprecated); gives `package.json`, `tsconfig`, ESLint and a fast dev server |
+| Build tool / dev server | **Vite** 8 (`react-ts` template) | Current standard for new React projects (Create React App is deprecated); gives `package.json`, `tsconfig`, linting and a fast dev server |
+| Linting | **oxlint** (the template's default) | Fast Rust-based linter with React hook rules; replaces ESLint in the current Vite template |
 | Contract → types | **openapi-typescript** | Generates only TypeScript types (no runtime code) from `openapi.yaml` |
 | HTTP client | **openapi-fetch** | Tiny typed `fetch` wrapper: paths, query parameters, request bodies and responses are checked against the generated types |
 | Server state | **TanStack Query** | Loading/error states, caching, keeps the previous page visible while the next one loads; familiar to the developer |
@@ -49,6 +50,11 @@ a peer dependency on TypeScript `^5.x`. npm refuses conflicting peer dependencie
 starts with **TypeScript 5.9** (supported by every tool here). Moving to a newer TypeScript can be
 done once `openapi-typescript` supports it.
 
+The Vite template is written for TypeScript 6, which turns `strict` and
+`noUncheckedSideEffectImports` on **by default**; TypeScript 5.9 does not. Both are therefore set
+explicitly in `tsconfig.app.json` and `tsconfig.node.json`, otherwise pinning 5.9 would silently
+disable strict type checking.
+
 ### Talking to the backend in development
 
 The dev server runs on `http://localhost:5173`, the backend on `http://localhost:8080`. Instead of
@@ -58,15 +64,15 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 ## 3. Implementation steps
 
 ### Phase 0 – Prerequisites
-- [ ] Node 24 / npm 11 (installed).
-- [ ] Backend running (`docker compose up -d` and `./mvnw spring-boot:run` in `backend/`).
+- [x] Node 24 / npm 11 (installed).
+- [x] Backend running (`docker compose up -d` and `./mvnw spring-boot:run` in `backend/`) – needed from Phase 2 on.
 
 ### Phase 1 – Project setup
-- [ ] Scaffold with Vite (`react-ts` template) into `frontend/`: `package.json`, `tsconfig`, ESLint, `index.html`, `src/`.
-- [ ] Pin TypeScript 5.9; add `openapi-typescript` (dev dependency) and `openapi-fetch`.
-- [ ] Vite proxy `/api` → `http://localhost:8080`.
-- [ ] `.gitignore` (`node_modules`, `dist`, generated `src/api/schema.d.ts`).
-- [ ] Verify: `npm install`, `npm run dev`, `npm run build`, `npm run lint`.
+- [x] Scaffold with Vite 8 (`create-vite` 9.2.1, `react-ts` template) into `frontend/`: `package.json`, `tsconfig`, oxlint, `index.html`, `src/` (template README not copied; own README in Phase 6).
+- [x] Pin TypeScript `~5.9.3` (with `strict` set explicitly); add `openapi-typescript` 7.13 (dev) and `openapi-fetch` 0.17. No peer dependency conflicts.
+- [x] Vite proxy `/api` → `http://localhost:8080`.
+- [x] `.gitignore` (`node_modules`, `dist`, generated `src/api/schema.d.ts`).
+- [x] Verified: `npm install`, `npm run build`, `npm run lint`; dev server serves the app and proxies `/api/movies` to the backend (incl. `404` Problem Details); `openapi-typescript` reads the contract.
 
 ### Phase 2 – Generate types from the contract
 - [ ] npm script `generate:api`: `openapi-typescript ../backend/src/main/resources/openapi/openapi.yaml -o src/api/schema.d.ts`.
