@@ -5,9 +5,21 @@ is designed **contract-first**: the OpenAPI spec in
 [`src/main/resources/openapi/openapi.yaml`](src/main/resources/openapi/openapi.yaml) is the source
 of truth, and the server interfaces and DTOs are generated from it at build time.
 
-> **Status:** work in progress. All endpoints work (list, search, get, add), and the movies from
-> `movies-compact.json` are loaded on startup. See
-> [`documentation/plan.md`](documentation/plan.md) for progress.
+**Features**
+
+- List all movies (paged, sorted by name), search movies by a term, get one movie, add a movie.
+- Search matches the movie name, synopsis, genres, actors and director (case-insensitive, partial).
+- Movies from [`movies-compact.json`](src/main/resources/data/movies-compact.json) are loaded on
+  startup; another JSON file can be loaded instead ([Movie data](#movie-data)).
+- Validation and errors in the standard Problem Details format (RFC 9457).
+- Swagger UI showing the API contract.
+
+**Tech stack:** Java 21, Spring Boot 4, PostgreSQL 17 (Docker Compose), Spring Data JPA, Liquibase,
+OpenAPI Generator, MapStruct, JUnit 5 + Mockito + Testcontainers, Maven.
+
+The design decisions and how the project was built are documented in
+[`documentation/plan.md`](documentation/plan.md); how AI was used in
+[`documentation/ai-usage.md`](documentation/ai-usage.md).
 
 ## Requirements
 
@@ -106,6 +118,79 @@ To run only the fast tests that don't need Docker:
 .\mvnw test "-Dtest=MovieServiceTest,MovieImporterTest,MoviesControllerTest"
 ```
 
+## Using the API
+
+The easiest way to try the API is **Swagger UI** at http://localhost:8080/swagger-ui.html
+("Try it out" on each endpoint). The contract itself is
+[`openapi.yaml`](src/main/resources/openapi/openapi.yaml).
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/movies?search=&page=0&size=20` | List movies, optionally filtered by `search`. Returns a page: `{items, page, size, totalItems, totalPages}` |
+| `GET` | `/api/movies/{id}` | Get one movie (`404` if not found) |
+| `POST` | `/api/movies` | Add a movie: `201` + `Location` header; `400` invalid; `409` same name and year exists |
+
+Examples with curl (bash / Git Bash; in PowerShell use `curl.exe`):
+
+```shell
+# List the first page of 5 movies
+curl "http://localhost:8080/api/movies?page=0&size=5"
+
+# Search (name, synopsis, genre, actor or director)
+curl "http://localhost:8080/api/movies?search=harrison%20ford"
+
+# Get one movie
+curl "http://localhost:8080/api/movies/1"
+
+# Add a movie
+curl -i -X POST "http://localhost:8080/api/movies" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Jaws", "year": 1975, "genres": ["Thriller"], "ageLimit": 12, "rating": 5,
+       "actors": [{"firstName": "Roy", "lastName": "Scheider"}],
+       "director": {"firstName": "Steven", "lastName": "Spielberg"},
+       "synopsis": "A giant shark terrorizes a beach town."}'
+```
+
+Adding a movie in PowerShell:
+
+```powershell
+$movie = @{
+    name     = "Jaws"
+    year     = 1975
+    genres   = @("Thriller")
+    ageLimit = 12
+    rating   = 5
+    director = @{ firstName = "Steven"; lastName = "Spielberg" }
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/movies" -ContentType "application/json" -Body $movie
+```
+
+Rules for a new movie: `name`, `year` (1888–2100), `genres` (at least one), `ageLimit` (0–21),
+`rating` (1–5) and `director` are required; `actors` and `synopsis` are optional. Text is trimmed,
+existing actors, directors and genres are reused (matched ignoring case), and repeated actors or
+genres are stored once. Invalid requests get a `400` with a list of field errors:
+
+```json
+{"status": 400, "title": "Bad Request", "detail": "Request validation failed.", "instance": "/api/movies",
+ "errors": [{"field": "rating", "message": "must be less than or equal to 5"}]}
+```
+
+## Architecture
+
+```
+api/         REST controller (implements the interface generated from openapi.yaml), error handling
+service/     Use cases (list, search, get, add), one transaction each;
+  mapper/    MapStruct mappers between API DTOs and entities (persons and genres are reused)
+domain/      JPA entities with the validation rules
+repository/  Spring Data repositories, search query
+seed/        JSON import on startup
+```
+
+The API is **contract-first**: change `openapi.yaml` first; the build regenerates the API
+interface and DTOs, and MapStruct fails the build until new fields are mapped. Details, and the
+reasoning behind the design, are in [`documentation/plan.md`](documentation/plan.md) (section
+"Layers and mapping"). Conventions for developers and AI agents are in [`AGENTS.md`](AGENTS.md).
+
 ## Movie data
 
 On every startup the application imports movies from a JSON file, by default the bundled
@@ -192,4 +277,7 @@ match.
 
 - [`documentation/instructions.txt`](documentation/instructions.txt) – the original task
 - [`documentation/plan.md`](documentation/plan.md) – implementation plan and design decisions
+- [`documentation/ai-usage.md`](documentation/ai-usage.md) – how AI was used to build the project
+- [`AGENTS.md`](AGENTS.md) – conventions and commands for developers and AI agents
+  ([`CLAUDE.md`](CLAUDE.md) points Claude Code to it)
 - [`documentation/ai-prompts.md`](documentation/ai-prompts.md) – all prompts given to the AI assistant (Claude Code), generated with `node backend/tools/export-prompts.mjs` from the repository root

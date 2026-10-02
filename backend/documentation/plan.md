@@ -270,11 +270,11 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 - [x] `MovieRepositoryTest` moved to the test container.
 
 ### Phase 7 – Documentation & handover
-- [ ] `README.md`: prerequisites, run DB, run app, run tests, example `curl` calls, how to load a different JSON file, how to reset the DB (`docker compose down -v`).
-- [ ] `AGENTS.md`/`CLAUDE.md`: conventions and commands for AI agents (contract-first rule: change spec first, then regenerate).
-- [ ] `documentation/ai-usage.md`: which tools were used, how, and what was reviewed/changed manually.
+- [x] `README.md`: features, tech stack, prerequisites, run DB/app/tests, **Using the API** (curl + PowerShell examples, verified against a running instance), architecture overview, loading a different JSON file, reset, troubleshooting.
+- [x] `AGENTS.md` (tool-neutral conventions: commands, layout, contract-first rules, "adding a field" checklist, transaction/mapping/test rules, environment notes) + `CLAUDE.md` importing it.
+- [x] `documentation/ai-usage.md`: tools, way of working, decisions made by the developer (with prompt numbers), what the AI did, how output was checked, AI mistakes caught. Section "Developer's notes" left for the developer.
 - [x] `tools/export-prompts.mjs` → `documentation/ai-prompts.md`: all prompts, answers to Claude's questions, results and files per step. **Re-run at the end** (`node backend/tools/export-prompts.mjs`); session transcripts are deleted by Claude Code after 30 days.
-- [ ] Optional: Dockerize the app itself and add it to compose.
+- [ ] Optional (not done): Dockerize the app itself and add it to compose.
 
 ## 8. Possible extensions (out of scope unless time allows)
 
