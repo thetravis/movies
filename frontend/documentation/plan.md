@@ -75,16 +75,22 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 - [x] Verified: `npm install`, `npm run build`, `npm run lint`; dev server serves the app and proxies `/api/movies` to the backend (incl. `404` Problem Details); `openapi-typescript` reads the contract.
 
 ### Phase 2 – Generate types from the contract
-- [ ] npm script `generate:api`: `openapi-typescript ../backend/src/main/resources/openapi/openapi.yaml -o src/api/schema.d.ts`.
-- [ ] Run it automatically before `dev`, `build` and `test` (`predev`/`prebuild`/`pretest`), like the backend regenerates on every build.
-- [ ] Typed API client `src/api/client.ts` (openapi-fetch, base URL `/`).
-- [ ] Convenient type aliases (`Movie`, `NewMovie`, `MoviePage`, `Problem`) exported from one module.
-- [ ] Verify: a temporary call to `GET /api/movies` through the proxy compiles and returns data.
+- [x] npm script `generateTypes`: `openapi-typescript ../backend/src/main/resources/openapi/openapi.yaml -o src/api/schema.d.ts`.
+- [x] Runs automatically after `npm install` (`postinstall`, so the editor has the types right after cloning) and before `dev` and `build` (`predev`/`prebuild`); `pretest` is added with the test runner in Phase 3.
+- [x] Typed API client `src/api/client.ts` (openapi-fetch; base URL = the page's origin, so the same code works in tests).
+- [x] Type aliases in `src/api/types.ts`: `Movie`, `NewMovie`, `MoviePage`, `Person`, `Problem`, `FieldError`, `ListMoviesParams`.
+- [x] Verified: type checking rejects wrong paths, unknown/wrongly typed query parameters and bodies missing required fields (temporary file with `@ts-expect-error`); the client returns data, `404` detail and `400` field errors from the real backend; `npm run build` regenerates a deleted `schema.d.ts`; the generated file is git-ignored.
+- [x] **Contract mismatch found and fixed in the backend:** the backend returned `"synopsis": null` although the contract declared `synopsis` optional and non-nullable. Fixed with the developer's rule (details in the backend plan, "Follow-up"):
+  - **Response schemas have no optional fields.** Every field of `Movie`, `MoviePage`, `Person`, `Problem` and `FieldError` is required and always sent; empty values are `null` (`Movie.synopsis`, `Problem.detail`, `Problem.errors`). The backend's generated models carry `@JsonInclude(ALWAYS)` (a simpler global Jackson setting was considered; the developer kept the per-class annotation).
+  - **Errors too:** every backend error, also Spring's own (malformed JSON, wrong parameter type, unknown path), is sent in the full `Problem` shape with `type` defaulting to `about:blank`.
+  - **Request schema `NewMovie`:** `synopsis` and `actors` are optional and nullable; a client may leave them out or send `null` (verified end to end in the backend tests).
+  - Generated types now: `Movie.synopsis: string | null`; `Problem.detail: string | null`; `Problem.errors: FieldError[] | null`; `NewMovie.synopsis?: string | null`; `NewMovie.actors?: Person[] | null`.
+  - Also switched the backend's generated code to JSpecify `@Nullable` (Spring's own was deprecated).
 
 ### Phase 3 – List movies with paging
 - [ ] Movie list showing the relevant fields (name, year, genres, rating, age limit, director, actors; synopsis shortened).
 - [ ] Paging controls: previous/next, "page x of y", total count; page size selector (optional).
-- [ ] Loading, error (Problem Details `detail`) and empty states.
+- [ ] Loading, error and empty states. Error message from the Problem's `detail`, falling back to `title` (`detail` is nullable); also handle network errors (backend not running), which have no Problem body.
 - [ ] Keep the current page visible while the next one loads.
 - [ ] Tests for the list and paging.
 
@@ -98,7 +104,8 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 ### Phase 5 – Add a movie
 - [ ] Form matching the contract's `NewMovie`: name, year, genres, age limit, rating, director, actors (add/remove rows), synopsis.
 - [ ] Client-side checks mirroring the contract (required fields, ranges) for immediate feedback; the backend stays the authority.
-- [ ] Show the backend's `400` field errors next to the fields (Problem Details `errors[].field`), and the `409` duplicate message.
+- [ ] Show the backend's `400` field errors next to the fields (`Problem.errors[].field`, e.g. `director.firstName`, `actors[0].lastName`; `errors` is `null` for non-validation errors), and the `409` duplicate message.
+- [ ] Optional fields: an empty synopsis is sent as `null` and an empty actor list as `[]` (both accepted by the backend; it also trims text and stores blank text as `null`).
 - [ ] After success: show the new movie and refresh the list.
 - [ ] Tests for the form, including server-side errors.
 
@@ -118,8 +125,9 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 | Question | Decision |
 |---|---|
 | Server state | TanStack Query |
-| Generated `src/api/schema.d.ts` | Git-ignored; regenerated before every `dev`, `build` and `test` |
+| Generated `src/api/schema.d.ts` | Git-ignored; regenerated after `npm install` and before every `dev`, `build` and `test`; script name `generateTypes` |
 | Search trigger | As you type, with a short debounce |
 | Add movie | Included (Phase 5) |
 | AI documentation | Separate for the frontend, in `frontend/documentation/` (the backend was the required exercise; the frontend is extra) |
 | Movie list component | Own table component instead of AG Grid (see "Why not AG Grid") |
+| Nullable fields | Response schemas have no optional fields: every field is always present, empty values are `null` (contract `nullable: true`). The frontend checks for `null`, never for a missing field. Errors (`Problem`) follow the same rule. The request schema `NewMovie` may have optional fields (`synopsis`, `actors`), which the frontend may leave out or send as `null` |

@@ -4,7 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "generateTypes": "openapi-typescript ../backend/src/main/resources/openapi/openapi.yaml -o src/api/schema.d.ts",
+    "postinstall": "npm run generateTypes",
+    "predev": "npm run generateTypes",
     "dev": "vite",
+    "prebuild": "npm run generateTypes",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
