@@ -1,0 +1,21 @@
+/* Long synopses are cut to three lines; the full text stays in the DOM. */
+.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.toggle {
+  margin-top: 0.25rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}

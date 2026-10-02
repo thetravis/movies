@@ -3,6 +3,7 @@
   --text-muted: #6b6375;
   --bg: #fff;
   --border: #e5e4e7;
+  --row-hover: #f6f5f8;
   --accent: #6d28d9;
   --error-text: #8a1c1c;
   --error-bg: #fdecec;
@@ -20,6 +21,7 @@
     --text-muted: #9ca3af;
     --bg: #16171d;
     --border: #2e303a;
+    --row-hover: #1f2029;
     --accent: #c084fc;
     --error-text: #fecaca;
     --error-bg: #3b1515;

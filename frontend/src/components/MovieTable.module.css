@@ -31,11 +31,15 @@
   color: var(--text-muted);
 }
 
-/* Long synopses are cut to three lines; the full text stays in the DOM. */
 .synopsis {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   max-width: 28rem;
+}
+
+/* Rows expand on click to show the whole synopsis. */
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: var(--row-hover);
 }
