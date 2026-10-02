@@ -19,8 +19,9 @@ interface MovieFormProps {
 }
 
 /**
- * Form for adding a movie. Values are checked against the contract's rules before sending; errors
- * from the backend (`400` field errors, `409` duplicate) are shown next to the fields or on top.
+ * Form for adding a movie (shown in `AddMovieDialog`). Values are checked against the contract's
+ * rules before sending; errors from the backend (`400` field errors, `409` duplicate) are shown
+ * next to the fields or on top.
  */
 export function MovieForm({ onCreated, onCancel }: MovieFormProps) {
   const [values, setValues] = useState<MovieFormValues>(emptyMovieForm)
@@ -96,9 +97,7 @@ export function MovieForm({ onCreated, onCancel }: MovieFormProps) {
   const field = (path: string) => ({ path, error: errors[path] })
 
   return (
-    <form ref={formRef} className={styles.form} onSubmit={handleSubmit} noValidate aria-labelledby="add-movie-title">
-      <h2 id="add-movie-title">Add a movie</h2>
-
+    <form ref={formRef} onSubmit={handleSubmit} noValidate>
       {formError && (
         <p role="alert" className={styles.formError}>
           {formError}
@@ -110,7 +109,6 @@ export function MovieForm({ onCreated, onCancel }: MovieFormProps) {
           {(props) => (
             <input
               {...props}
-              autoFocus
               maxLength={255}
               value={values.name}
               onChange={(e) => change((v) => ({ ...v, name: e.target.value }), 'name')}

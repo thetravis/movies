@@ -7,6 +7,8 @@ import type { ListMoviesParams, Movie, MoviePage, NewMovie } from './types'
 export const movieKeys = {
   all: ['movies'] as const,
   list: (params: ListMoviesParams) => [...movieKeys.all, 'list', params] as const,
+  /** Key of the add-movie mutation, e.g. to check whether a save is in progress. */
+  create: ['movies', 'create'] as const,
 }
 
 /** `GET /api/movies`. Throws an {@link ApiError} on failure. */
@@ -56,6 +58,7 @@ export async function createMovie(newMovie: NewMovie): Promise<Movie> {
 export function useCreateMovie() {
   const queryClient = useQueryClient()
   return useMutation<Movie, ApiError, NewMovie>({
+    mutationKey: movieKeys.create,
     mutationFn: createMovie,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: movieKeys.all }),
   })

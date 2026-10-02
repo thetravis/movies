@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react'
-import userEvent, { type UserEvent } from '@testing-library/user-event'
+import userEvent, { PointerEventsCheckLevel, type UserEvent } from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import type { NewMovie } from '../api/types'
@@ -31,7 +31,7 @@ function rejectNewMovies(status: number, problem: ReturnType<typeof aProblem>) {
 async function openForm(user: UserEvent) {
   renderWithQueryClient(<App />)
   await user.click(screen.getByRole('button', { name: 'Add a movie' }))
-  return screen.getByRole('form', { name: 'Add a movie' })
+  return screen.getByRole('dialog', { name: 'Add a movie' })
 }
 
 async function fillRequiredFields(user: UserEvent) {
@@ -78,7 +78,7 @@ describe('Adding a movie', () => {
         synopsis: 'A giant shark.',
       },
     ])
-    expect(screen.queryByRole('form', { name: 'Add a movie' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Add a movie' })).not.toBeInTheDocument()
     expect(listRequests.length).toBeGreaterThan(listRequestsBefore) // the list was reloaded
   })
 
@@ -213,17 +213,72 @@ describe('Adding a movie', () => {
     expect(received[0].actors).toEqual([{ firstName: 'Robert', lastName: 'Shaw' }])
   })
 
-  it('closes the form on Cancel without sending', async () => {
-    const user = userEvent.setup()
-    serveMovies([])
-    const received = acceptNewMovies()
-    await openForm(user)
-    await user.type(screen.getByLabelText('Name'), 'Jaws')
+  describe('dialog', () => {
+    it('opens as a modal dialog with the focus in the first field', async () => {
+      const user = userEvent.setup()
+      serveMovies([])
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      const dialog = await openForm(user)
 
-    expect(screen.queryByRole('form', { name: 'Add a movie' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add a movie' })).toBeInTheDocument()
-    expect(received).toEqual([])
+      expect(dialog).toHaveAccessibleDescription('Actors and synopsis are optional; all other fields are required.')
+      expect(screen.getByLabelText('Name')).toHaveFocus()
+    })
+
+    it('closes on Cancel without sending, and the focus returns to the button', async () => {
+      const user = userEvent.setup()
+      serveMovies([])
+      const received = acceptNewMovies()
+      await openForm(user)
+      await user.type(screen.getByLabelText('Name'), 'Jaws')
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      expect(screen.queryByRole('dialog', { name: 'Add a movie' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Add a movie' })).toHaveFocus()
+      expect(received).toEqual([])
+    })
+
+    it('closes with Esc and with the close button', async () => {
+      const user = userEvent.setup()
+      serveMovies([])
+      await openForm(user)
+
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Add a movie' }))
+      await user.click(screen.getByRole('button', { name: 'Close' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('stays open when clicking outside, so the input is not lost', async () => {
+      // While the dialog is open Radix disables pointer events on the page behind it; send the click
+      // anyway, to check that the dialog itself ignores clicks outside.
+      const user = userEvent.setup({ pointerEventsCheck: PointerEventsCheckLevel.Never })
+      serveMovies([])
+      await openForm(user)
+      await user.type(screen.getByLabelText('Name'), 'Jaws')
+
+      await user.click(document.body)
+
+      expect(screen.getByRole('dialog', { name: 'Add a movie' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Name')).toHaveValue('Jaws')
+    })
+
+    it('cannot be closed while saving', async () => {
+      const user = userEvent.setup()
+      serveMovies([])
+      acceptNewMovies({ latency: 200 })
+      await openForm(user)
+      await fillRequiredFields(user)
+
+      await user.click(screen.getByRole('button', { name: 'Save movie' }))
+      await user.keyboard('{Escape}')
+
+      expect(screen.getByRole('dialog', { name: 'Add a movie' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled()
+      expect(await screen.findByText('Added "Jaws" (1975).')).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 })

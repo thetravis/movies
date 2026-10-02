@@ -28,6 +28,7 @@ up as a compile error in the frontend, just as it does in the backend.
 | Tests | Vitest 5 + React Testing Library + **MSW 2.15** to mock the API | Vite-native test runner; tests through the UI the way a user uses it; requests go through the real API client. MSW 3.0 was released days before; 2.x is the mature version |
 | Styling | Plain CSS (CSS modules) | No UI library needed for three screens |
 | Movie list | **Own table component** (`MovieTable`), not AG Grid | See "Why not AG Grid" below |
+| Dialog | **Radix UI Dialog** (`@radix-ui/react-dialog`) | Developer's request: the add-movie form as an overlay window. Headless: accessible modal behaviour (focus trap, Esc, inert background, focus returned) with our own styling. Considered: Headless UI / React Aria (similar, larger or Tailwind-oriented), MUI (brings its own styling system), native `<dialog>` (no `showModal()` in jsdom) |
 
 ### Why not AG Grid
 
@@ -112,6 +113,7 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 - [x] After success: the form closes, a notice says "Added "Jaws" (1975)." (`role="status"`), and all movie lists are reloaded (`useCreateMovie` invalidates the movie queries). Saving disables the buttons (no double submit). `409` and network errors appear on top of the form, which keeps the input.
 - [x] Tests: `movieFormModel.test.ts` (18: rules incl. range limits, conversion to `NewMovie`, genre parsing, mapping of backend paths) and `MovieForm.test.tsx` (10, through `App`: exact request body, `null`/empty optional fields, client errors + focus, error cleared on edit, backend field errors + focus, `409`, network error, no double submit, actor rows, Cancel). 52 tests in total. Checked by breaking five behaviours on purpose (focus, list refresh, `null` synopsis, double submit, `genres[]` mapping): each failed the expected tests.
 - [x] **Finding:** `movieForm.ts` and `MovieForm.tsx` differed only in letter case; Windows ignores case, so the import resolved to the wrong file. The logic module is now `movieFormModel.ts`.
+- [x] **Developer request:** the form as an overlay window. `AddMovieDialog` (Radix Dialog) holds the "Add a movie" button and the dialog (title, description, form, × button). Esc, × and Cancel close it; clicking outside does not (protects the input); it can't be closed while saving (`useIsMutating` with the add-movie mutation key); the focus starts in the Name field and returns to the button. 5 dialog tests, 56 in total; the two guards (outside click, closing while saving) were each removed on purpose and caught by their test.
 
 ### Phase 6 – Documentation & handover
 - [ ] `frontend/README.md`: requirements, install, run (with the backend), test, build.
