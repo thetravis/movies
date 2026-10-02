@@ -7,7 +7,12 @@ import type { paths } from './schema'
  * shows up as a compile error here.
  */
 export function createApiClient(baseUrl: string) {
-  return createClient<paths>({ baseUrl })
+  return createClient<paths>({
+    baseUrl,
+    // Look up fetch on every call. openapi-fetch would otherwise keep the fetch that existed when
+    // the client was created, and miss a fetch replaced later (e.g. by the API mock in tests).
+    fetch: (request) => globalThis.fetch(request),
+  })
 }
 
 /**

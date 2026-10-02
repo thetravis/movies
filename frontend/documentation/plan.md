@@ -25,7 +25,7 @@ up as a compile error in the frontend, just as it does in the backend.
 | Contract → types | **openapi-typescript** | Generates only TypeScript types (no runtime code) from `openapi.yaml` |
 | HTTP client | **openapi-fetch** | Tiny typed `fetch` wrapper: paths, query parameters, request bodies and responses are checked against the generated types |
 | Server state | **TanStack Query** | Loading/error states, caching, keeps the previous page visible while the next one loads; familiar to the developer |
-| Tests | Vitest + React Testing Library (+ MSW to mock the API) | Vite-native test runner; tests through the UI the way a user uses it |
+| Tests | Vitest 5 + React Testing Library + **MSW 2.15** to mock the API | Vite-native test runner; tests through the UI the way a user uses it; requests go through the real API client. MSW 3.0 was released days before; 2.x is the mature version |
 | Styling | Plain CSS (CSS modules) | No UI library needed for three screens |
 | Movie list | **Own table component** (`MovieTable`), not AG Grid | See "Why not AG Grid" below |
 
@@ -88,11 +88,13 @@ calls relative URLs (`/api/movies`) and needs no backend change.
   - Also switched the backend's generated code to JSpecify `@Nullable` (Spring's own was deprecated).
 
 ### Phase 3 – List movies with paging
-- [ ] Movie list showing the relevant fields (name, year, genres, rating, age limit, director, actors; synopsis shortened).
-- [ ] Paging controls: previous/next, "page x of y", total count; page size selector (optional).
-- [ ] Loading, error and empty states. Error message from the Problem's `detail`, falling back to `title` (`detail` is nullable); also handle network errors (backend not running), which have no Problem body.
-- [ ] Keep the current page visible while the next one loads.
-- [ ] Tests for the list and paging.
+- [x] Movie list (`MovieTable`, typed `Movie[]` rows): name (year), genres, rating as stars (with an accessible "x out of 5" label), age limit ("All ages" for 0), director, actors, synopsis cut to three lines with CSS (full text in the DOM). No actors / `null` synopsis shown as "—".
+- [x] `Pagination`: previous/next (disabled at the ends), "Page x of y", total count, page size selector (10/20/50; changing it goes back to the first page).
+- [x] Loading, error and empty states. Error message from the Problem's `detail`, falling back to `title` (`detail` is nullable); also handle network errors (backend not running), which have no Problem body. Error box with "Try again". Failed requests are retried once, but only network/5xx errors (a 4xx would fail again).
+- [x] Keep the current page visible while the next one loads (TanStack Query `placeholderData: keepPreviousData`; the table is marked `aria-busy` and dimmed).
+- [x] Tests (Vitest + React Testing Library + MSW 2, 9 tests): details incl. `null` fields, loading, paging forward/back with the requested `page` values, page size change, previous page kept while loading, empty state, Problem `detail`, fallback to `title`, network error + "Try again". Test data builders are typed from the contract. Checked by breaking two behaviours on purpose (no `placeholderData`, page not reset on size change): each failed exactly the expected test.
+- [x] API layer: `src/api/movies.ts` (`fetchMovies`, `useMovies`, query keys), `src/api/errors.ts` (`ApiError` with `status` and `problem`), `src/api/queryClient.ts`. `npm test` regenerates the types first (`pretest`); `npm run test:watch` for development.
+- [x] **Finding:** openapi-fetch keeps the `fetch` function that exists when the client is created. The API mock replaces `fetch` later, so all requests went to the real network ("fetch failed"). The client now looks up `fetch` on every call (`src/api/client.ts`).
 
 ### Phase 4 – Search
 - [ ] Search box; search as you type with a short debounce (~300 ms).
