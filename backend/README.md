@@ -282,4 +282,4 @@ match.
 - [`documentation/ai-usage.md`](documentation/ai-usage.md) – how AI was used to build the project
 - [`AGENTS.md`](AGENTS.md) – conventions and commands for developers and AI agents
   ([`CLAUDE.md`](CLAUDE.md) points Claude Code to it)
-- [`documentation/ai-prompts.md`](documentation/ai-prompts.md) – all prompts given to the AI assistant (Claude Code), generated with `node backend/tools/export-prompts.mjs` from the repository root
+- [`documentation/ai-prompts.md`](documentation/ai-prompts.md) – all prompts given to the AI assistant (Claude Code), generated with `node backend/tools/export-prompts.mjs --until 2026-10-02T19:49:00Z` from the repository root

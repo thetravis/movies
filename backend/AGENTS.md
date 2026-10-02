@@ -22,7 +22,7 @@ Run from the `backend` directory. PowerShell: `.\mvnw`; bash: `./mvnw`.
 | Run the application (port 8080) | `./mvnw spring-boot:run` |
 | All tests (needs Docker running) | `./mvnw verify` |
 | Fast tests without Docker | `./mvnw test "-Dtest=MovieServiceTest,MovieImporterTest,MoviesControllerTest"` |
-| Export the AI prompt log | `node backend/tools/export-prompts.mjs` (from the repository root) |
+| Export the AI prompt log (backend part) | `node backend/tools/export-prompts.mjs --until 2026-10-02T19:49:00Z` (from the repository root; later prompts belong to the frontend, see `frontend/AGENTS.md`) |
 
 Always run `./mvnw verify` before finishing a change; all tests must pass.
 

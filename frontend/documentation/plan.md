@@ -116,9 +116,10 @@ calls relative URLs (`/api/movies`) and needs no backend change.
 - [x] **Developer request:** the form as an overlay window. `AddMovieDialog` (Radix Dialog) holds the "Add a movie" button and the dialog (title, description, form, × button). Esc, × and Cancel close it; clicking outside does not (protects the input); it can't be closed while saving (`useIsMutating` with the add-movie mutation key); the focus starts in the Name field and returns to the button. 5 dialog tests, 56 in total; the two guards (outside click, closing while saving) were each removed on purpose and caught by their test.
 
 ### Phase 6 – Documentation & handover
-- [ ] `frontend/README.md`: requirements, install, run (with the backend), test, build.
-- [ ] `AGENTS.md` / `CLAUDE.md` for the frontend (contract-first: change `openapi.yaml`, regenerate, fix compile errors).
-- [ ] `frontend/documentation/ai-usage.md`: how AI was used for the frontend (documented separately from the backend, which was the required exercise); prompt log for the frontend sessions (add a `--since` option to `backend/tools/export-prompts.mjs`, so the frontend log starts with the first frontend prompt and the backend log stays unchanged).
+- [x] `frontend/README.md`: features, requirements (Node 22.12+ or 24, backend for development), getting started, scripts, contract and types, structure, tests, troubleshooting. `engines` added to `package.json` (Vitest 5 needs Node 22.12+).
+- [x] `frontend/AGENTS.md` (commands, layout, rules for API/contract, state, accessibility, tests, code style, environment) + `CLAUDE.md` importing it.
+- [x] `frontend/documentation/ai-usage.md`: tools, way of working, the developer's decisions (with prompt numbers), what the AI did, how the output was checked, issues found. "Developer's notes" left for the developer.
+- [x] Prompt log: `--since` / `--until` options added to `backend/tools/export-prompts.mjs` (with a correct link to the script wherever the log is written). Frontend log: `--since 2026-10-02T19:49:00Z` → `frontend/documentation/ai-prompts.md` (16 prompts). The backend log is unchanged; the backend docs now use `--until 2026-10-02T19:49:00Z`, so re-running it doesn't mix in frontend prompts.
 
 ## 4. Possible extensions
 
