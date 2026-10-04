@@ -310,10 +310,62 @@ Design in 4.1. The importer reuses `MovieService.create`, so build it together w
 
 - Update/delete movies. Developer's plan: partial updates with `PATCH` and an `UpdateMovie` schema where only the fields present in the request are changed. That needs "field missing" and "field set to null" to be distinguishable in Java, e.g. with the generator's `openApiNullable` (`JsonNullable<T>`) for that schema.
 - Filters (genre, year range, age limit) and sorting.
-- Full-text search (`tsvector`) or `pg_trgm` index.
+- Search that scales to large data (`pg_trgm`, full-text search, search engine): see 8.2.
 - Authentication for write operations.
 - CI pipeline (GitHub Actions: build + tests).
 - Frontend client.
+
+### 8.1 Managing genres
+
+Today **a genre's name is its identity**: the API uses plain strings, `uq_genre_name` makes names
+unique (case-insensitive), and `GenreMapper` finds or creates by name. That is also why
+`GenreMapper` is hand-written while `PersonMapper` is MapStruct: there is no `GenreDto`, and a
+`String` has no fields for MapStruct to copy.
+
+- **List genres** (`GET /api/genres` → `string[]`): fits the current design;
+  `findAll(Sort.by("name"))` + `GenreMapper.toName`.
+- **Add a genre to a movie** (e.g. `PUT /api/movies/{id}/genres/{name}`): fits too; reuse
+  `GenreMapper.toEntity` + `Movie.addGenre`. Decide whether unknown names are still created on the
+  fly or, with a curated list, rejected with `400` (look up only).
+- **Edit (rename) genres** breaks the name-as-identity assumption: the URL changes on rename,
+  clients holding the old name break, and renaming to an existing name is really a merge. Give
+  genres an id in the API (`Genre {id, name}`, movies return genre objects). With a `GenreDto`,
+  `GenreMapper` becomes a MapStruct mapper like `PersonMapper`. Breaking API change – cheaper before the API has users.
+
+### 8.2 Search at scale
+
+The current search is instant for 20 movies but would not scale to IMDb size (~10M titles, ~15M
+people, 50M+ cast rows):
+
+- `LIKE '%term%'` with a leading wildcard can't use a B-tree index, and `lower(...)`/`concat(...)`
+  on the columns prevents index use anyway, so every branch scans every row.
+- `OR` across five conditions, two of them `EXISTS` subqueries over actors and genres, can't use a
+  separate index per branch: in practice movies are scanned and the subqueries run per movie.
+- Paging: `MoviePage.totalItems`/`totalPages` makes Spring Data run a count query over **all**
+  matches (millions for "the"), and `order by name` + `offset` reads and discards every row before
+  the requested page. At that size results should be ordered by relevance anyway.
+
+Steps, in order (measure first: load the IMDb TSV dumps and compare with `EXPLAIN ANALYZE`):
+
+1. **Trigram indexes (`pg_trgm`)** – same "contains" semantics, no API change. GIN indexes on
+   `lower(name)` and `lower(first_name || ' ' || last_name)` support `LIKE '%term%'`. Rewrite the
+   query so each branch can use its index: search `person` once, reach movies via
+   `ix_movie_actor_person` and the director FK, and combine branches with `UNION` instead of
+   `OR`/`EXISTS`. Use `||`, not `concat()` (index expressions must be `IMMUTABLE`; `concat` isn't),
+   and the query must repeat the indexed expression exactly. Trigrams don't help terms shorter than
+   3 characters: add a minimum search length to the contract. The synopsis is better left to
+   full-text search.
+2. **Full-text search (`tsvector`)** – a weighted search document per movie (name highest, then
+   director/actors, genres, synopsis) with a GIN index, ordered by `ts_rank`. Matches words (with
+   stemming), not substrings. A generated column can't read other tables, so the document is
+   maintained by the service or a trigger, or kept in a materialized view.
+3. **Search engine** (OpenSearch/Elasticsearch, Meilisearch) – when typo tolerance, autocomplete,
+   facets or tuned relevance are needed. Costs a second system kept in sync with PostgreSQL
+   (outbox table or change data capture).
+
+Paging at any step: replace the exact count with an estimate or a "has next page" flag (Spring
+Data `Slice`, no count query) and use keyset pagination instead of `offset`. Both change the
+contract (`MoviePage`).
 
 ## 9. Open questions / decisions to confirm
 
